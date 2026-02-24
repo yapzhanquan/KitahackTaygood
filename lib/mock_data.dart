@@ -38,7 +38,7 @@ final List<Project> mockProjects = [
     description:
         'A low-cost housing project promising 300 terrace houses for B40 families. '
         'Construction halted at foundation stage. Site appears abandoned with overgrown vegetation.',
-    imageUrl: '',
+    imageUrl: 'assets/images/Taman_Melati.jpg',
     expectedCompletion: DateTime(2025, 12, 1),
     agencyOrDeveloper: 'Syarikat Bina Megah Sdn Bhd',
     lastActivity: DateTime(2025, 8, 15),
@@ -62,7 +62,7 @@ final List<Project> mockProjects = [
     description:
         'A mid-range condominium with 600 units across two 40-storey towers. '
         'Progress has slowed considerably with only intermittent work observed over the past 3 months.',
-    imageUrl: '',
+    imageUrl: 'assets/images/Vista_Kota.jpg',
     expectedCompletion: DateTime(2027, 3, 1),
     agencyOrDeveloper: 'Mega Development Group',
     lastActivity: DateTime(2026, 2, 5),
@@ -85,7 +85,7 @@ final List<Project> mockProjects = [
     description:
         'Government-funded apartment complex with 800 units for civil servants. '
         'Construction on track, currently finishing interior works on lower floors.',
-    imageUrl: '',
+    imageUrl: 'assets/images/Katsuri.jpg',
     expectedCompletion: DateTime(2026, 9, 30),
     agencyOrDeveloper: 'SPNB (Syarikat Perumahan Negara)',
     lastActivity: DateTime(2026, 2, 21),
@@ -109,7 +109,7 @@ final List<Project> mockProjects = [
     description:
         'Mixed-use development featuring serviced apartments and retail lots. '
         'No recent community reports available.',
-    imageUrl: '',
+    imageUrl: 'assets/images/residence_cyberjaya.jpg',
     expectedCompletion: DateTime(2028, 1, 1),
     agencyOrDeveloper: 'Setia Haruman Sdn Bhd',
     lastActivity: DateTime(2025, 11, 1),
