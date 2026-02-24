@@ -18,6 +18,7 @@ class ProjekWatchApp extends StatelessWidget {
       child: MaterialApp(
         title: 'ProjekWatch',
         debugShowCheckedModeBanner: false,
+        debugShowMaterialGrid: false,
         theme: ThemeData(
           useMaterial3: true,
           brightness: Brightness.light,
@@ -26,7 +27,7 @@ class ProjekWatchApp extends StatelessWidget {
             ThemeData.light().textTheme,
           ),
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF1A1A2E),
+            seedColor: const Color.fromARGB(255, 57, 57, 71),
             brightness: Brightness.light,
             surface: const Color(0xFFFAFAFA),
           ),
@@ -76,3 +77,4 @@ class ProjekWatchApp extends StatelessWidget {
     );
   }
 }
+

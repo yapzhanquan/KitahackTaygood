@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/project_model.dart';
 import 'status_badge.dart';
 import 'confidence_badge.dart';
+import 'project_image.dart';
 
 class ProjectCard extends StatelessWidget {
   final Project project;
@@ -71,26 +72,35 @@ class ProjectCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    // Placeholder gradient
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            _categoryColor.withValues(alpha: 0.15),
-                            _categoryColor.withValues(alpha: 0.35),
-                          ],
+                    // ✅ Show image if available, otherwise fallback to gradient
+                    if (project.imageUrl.trim().isNotEmpty)
+                      ProjectImage(
+                        path: project.imageUrl,
+                        height: 170,
+                        borderRadius: BorderRadius.zero, // ClipRRect already clips
+                      )
+                    else
+                      // Placeholder gradient
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              _categoryColor.withValues(alpha: 0.15),
+                              _categoryColor.withValues(alpha: 0.35),
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            _categoryIcon,
+                            size: 56,
+                            color: _categoryColor.withValues(alpha: 0.5),
+                          ),
                         ),
                       ),
-                      child: Center(
-                        child: Icon(
-                          _categoryIcon,
-                          size: 56,
-                          color: _categoryColor.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ),
+
                     // Bottom gradient overlay
                     Positioned(
                       bottom: 0,
@@ -110,18 +120,21 @@ class ProjectCard extends StatelessWidget {
                         ),
                       ),
                     ),
+
                     // Status badge top-left
                     Positioned(
                       top: 10,
                       left: 10,
                       child: StatusBadge(status: project.status),
                     ),
+
                     // Confidence badge top-right
                     Positioned(
                       top: 10,
                       right: 10,
                       child: ConfidenceBadge(confidence: project.confidence),
                     ),
+
                     // Bookmark icon
                     Positioned(
                       bottom: 10,
@@ -144,6 +157,7 @@ class ProjectCard extends StatelessWidget {
                 ),
               ),
             ),
+
             // Info area
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -163,6 +177,7 @@ class ProjectCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(

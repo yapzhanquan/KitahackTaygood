@@ -14,7 +14,7 @@ final List<Project> mockProjects = [
         'A 30-storey affordable housing project under RUMAWIP, featuring 450 units ranging from 800–1000 sq ft. '
         'Amenities include a swimming pool, gymnasium, surau, and playground. '
         'Currently in structural phase with columns rising on floors 18–22.',
-    imageUrl: '',
+    imageUrl: 'assets/images/Harmoni_phase_2.jpg',
     expectedCompletion: DateTime(2027, 6, 15),
     agencyOrDeveloper: 'PR1MA Corporation',
     lastActivity: DateTime(2026, 2, 20),
