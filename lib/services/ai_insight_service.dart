@@ -15,8 +15,7 @@ class AiInsightResult {
 }
 
 class AiInsightService {
-  static const String _apiKey =
-      String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+  static const String _apiKey = 'AIzaSyD5q084VtJrWGDjl0Ocb_eF3x9eCFPIzSA';
 
   Future<AiInsightResult> generatePortfolioInsights(
     List<Project> projects,
