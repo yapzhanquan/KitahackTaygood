@@ -61,10 +61,13 @@ void main() {
     testWidgets('switching to Insights tab shows insights view',
         (tester) async {
       await tester.pumpWidget(buildTestApp(const MainPage()));
+      await tester.ensureVisible(find.text('Insights'));
       await tester.tap(find.text('Insights'));
       await tester.pumpAndSettle();
       expect(find.text('Project Insights'), findsOneWidget);
       expect(find.text('Status Breakdown'), findsOneWidget);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -700));
+      await tester.pumpAndSettle();
       expect(find.text('Confidence Levels'), findsOneWidget);
     });
   });

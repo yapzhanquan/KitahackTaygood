@@ -10,6 +10,7 @@ import 'project_detail_page.dart';
 import 'add_checkin_page.dart';
 import 'sign_in_page.dart';
 import '../widgets/status_badge.dart';
+import '../services/ai_insight_service.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -20,6 +21,10 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int _selectedTab = 0;
+  final AiInsightService _aiInsightService = AiInsightService();
+  String? _aiInsightText;
+  String? _aiInsightNote;
+  bool _isGeneratingAiInsight = false;
 
   @override
   Widget build(BuildContext context) {
@@ -67,24 +72,33 @@ class _MainPageState extends State<MainPage> {
               letterSpacing: -0.5,
             ),
           ),
-          const Spacer(),
-          // Center tabs
-          _TabButton(
-            label: 'Projects',
-            isSelected: _selectedTab == 0,
-            onTap: () => setState(() => _selectedTab = 0),
+          const SizedBox(width: 10),
+          // Tabs can scroll horizontally when space is tight.
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _TabButton(
+                    label: 'Projects',
+                    isSelected: _selectedTab == 0,
+                    onTap: () => setState(() => _selectedTab = 0),
+                  ),
+                  _TabButton(
+                    label: 'Categories',
+                    isSelected: _selectedTab == 1,
+                    onTap: () => setState(() => _selectedTab = 1),
+                  ),
+                  _TabButton(
+                    label: 'Insights',
+                    isSelected: _selectedTab == 2,
+                    onTap: () => setState(() => _selectedTab = 2),
+                  ),
+                ],
+              ),
+            ),
           ),
-          _TabButton(
-            label: 'Categories',
-            isSelected: _selectedTab == 1,
-            onTap: () => setState(() => _selectedTab = 1),
-          ),
-          _TabButton(
-            label: 'Insights',
-            isSelected: _selectedTab == 2,
-            onTap: () => setState(() => _selectedTab = 2),
-          ),
-          const Spacer(),
+          const SizedBox(width: 10),
           // Contribute button
           GestureDetector(
             onTap: () => _onContributeTap(context),
@@ -478,6 +492,16 @@ class _MainPageState extends State<MainPage> {
             all.where((p) => p.confidence == ConfidenceLevel.medium).length;
         final lowConf =
             all.where((p) => p.confidence == ConfidenceLevel.low).length;
+        final totalCheckIns =
+            all.fold<int>(0, (sum, project) => sum + project.checkIns.length);
+        final stalledSlowing = stalledCount + slowingCount;
+        final stalledSlowingPct = all.isEmpty
+            ? 0.0
+            : ((stalledSlowing / all.length) * 100).clamp(0.0, 100.0);
+        final avgCheckIns =
+            all.isEmpty ? 0.0 : totalCheckIns / all.length;
+        final highConfidencePct =
+            all.isEmpty ? 0.0 : ((highConf / all.length) * 100).clamp(0.0, 100.0);
 
         return ListView(
           padding: const EdgeInsets.all(20),
@@ -497,6 +521,114 @@ class _MainPageState extends State<MainPage> {
                 fontSize: 14,
                 color: Color(0xFF6B7280),
               ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.auto_awesome_rounded,
+                          size: 18, color: Color(0xFF4F46E5)),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'AI Portfolio Summary',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: _isGeneratingAiInsight
+                            ? null
+                            : () => _generateAiInsights(all),
+                        child: _isGeneratingAiInsight
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('Generate'),
+                      ),
+                    ],
+                  ),
+                  if (_aiInsightText != null) ...[
+                    Text(
+                      _aiInsightText!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF374151),
+                        height: 1.4,
+                      ),
+                    ),
+                  ] else ...[
+                    const Text(
+                      'Generate an AI-backed summary to highlight portfolio health, risks, and immediate actions.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF6B7280),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                  if (_aiInsightNote != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _aiInsightNote!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Impact Metrics',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _MetricTile(
+                  label: 'Total Check-ins',
+                  value: totalCheckIns.toString(),
+                ),
+                const SizedBox(width: 12),
+                _MetricTile(
+                  label: 'Avg Check-ins/Project',
+                  value: avgCheckIns.toStringAsFixed(1),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _MetricTile(
+                  label: 'Stalled+Slowing Rate',
+                  value: '${stalledSlowingPct.toStringAsFixed(1)}%',
+                ),
+                const SizedBox(width: 12),
+                _MetricTile(
+                  label: 'High Confidence Rate',
+                  value: '${highConfidencePct.toStringAsFixed(1)}%',
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             const Text(
@@ -587,6 +719,23 @@ class _MainPageState extends State<MainPage> {
         );
       },
     );
+  }
+
+  Future<void> _generateAiInsights(List<Project> projects) async {
+    setState(() {
+      _isGeneratingAiInsight = true;
+      _aiInsightNote = null;
+    });
+
+    final result = await _aiInsightService.generatePortfolioInsights(projects);
+    if (!mounted) return;
+
+    setState(() {
+      _aiInsightText = result.summary;
+      _aiInsightNote = result.note ??
+          (result.usedAi ? 'Generated using Gemini 1.5 Flash.' : null);
+      _isGeneratingAiInsight = false;
+    });
   }
 }
 
@@ -684,6 +833,52 @@ class _InsightCard extends StatelessWidget {
               label,
               style: const TextStyle(
                 fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _MetricTile({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1A1A2E),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF6B7280),
               ),
