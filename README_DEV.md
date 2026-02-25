@@ -70,13 +70,16 @@ Controlled by `lib/config/app_config.dart`:
 
 | Constant             | Default     | Purpose |
 |----------------------|-------------|---------|
-| `dataMode`           | `DataMode.mock` | `mock` = local data, `firebase` = live Firestore |
+| `dataMode`           | `DataMode.mock` | Requested mode from `--dart-define=DATA_MODE=...` |
+| `runtimeDataMode`    | `DataMode.mock` | Effective mode after startup checks/fallback |
 | `useEmulators`       | `false`     | Connect to Firebase Emulator Suite |
 | `googleMapsEnabled`  | `false`     | Show real map vs styled placeholder |
+| `geminiApiKey`       | `''`        | Gemini API key from `--dart-define=GEMINI_API_KEY` |
+| `geminiModel`        | `gemini-2.0-flash` | Preferred Gemini model from `--dart-define=GEMINI_MODEL` |
 
 To switch to Firebase:
 1. Run `flutterfire configure` to generate real `firebase_options.dart`.
-2. Set `dataMode` to `DataMode.firebase` in `app_config.dart`.
+2. Run with `--dart-define=DATA_MODE=firebase`.
 3. Deploy Firestore rules: `firebase deploy --only firestore:rules,storage`.
 
 ---
@@ -127,8 +130,9 @@ UI (Screens / Widgets)
 
 1. User taps **Contribute** or **Bookmark** → checked via `AuthProvider.isSignedIn`.
 2. If not signed in → `SignInPage.show(context)` opens a bottom sheet.
-3. Google Sign-In → Firebase Auth credential → Firestore user doc upserted.
-4. On success, the gated action proceeds.
+3. In firebase mode: Google Sign-In → Firebase Auth credential → Firestore user doc upserted.
+4. In mock mode: local demo user is created so gated flows can still be tested.
+5. On success, the gated action proceeds.
 
 ---
 

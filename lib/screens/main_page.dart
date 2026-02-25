@@ -733,7 +733,9 @@ class _MainPageState extends State<MainPage> {
     setState(() {
       _aiInsightText = result.summary;
       _aiInsightNote = result.note ??
-          (result.usedAi ? 'Generated using Gemini 1.5 Flash.' : null);
+          (result.usedAi
+              ? 'Generated using ${result.modelUsed ?? 'Gemini'}.'
+              : null);
       _isGeneratingAiInsight = false;
     });
   }

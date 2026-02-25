@@ -10,6 +10,8 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 
 class DefaultFirebaseOptions {
+  static bool get isConfigured => !_looksLikePlaceholder(currentPlatform);
+
   static FirebaseOptions get currentPlatform {
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -19,6 +21,16 @@ class DefaultFirebaseOptions {
       default:
         return web;
     }
+  }
+
+  static bool _looksLikePlaceholder(FirebaseOptions options) {
+    final apiKey = options.apiKey.trim();
+    final projectId = options.projectId.trim().toLowerCase();
+    final appId = options.appId.trim();
+    return apiKey.isEmpty ||
+        apiKey.startsWith('YOUR_') ||
+        projectId == 'your-project-id' ||
+        appId.contains('000000000000');
   }
 
   // ── Replace the values below after running `flutterfire configure` ──

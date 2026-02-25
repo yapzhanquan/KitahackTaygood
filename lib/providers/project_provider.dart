@@ -21,7 +21,7 @@ class ProjectProvider extends ChangeNotifier {
   late final CheckinRepository _checkinRepo;
 
   ProjectProvider({DataMode? dataMode})
-      : _dataMode = dataMode ?? AppConfig.dataMode {
+      : _dataMode = dataMode ?? AppConfig.runtimeDataMode {
     if (_dataMode == DataMode.firebase) {
       _projectRepo = ProjectRepository();
       _checkinRepo = CheckinRepository();

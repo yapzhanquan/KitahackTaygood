@@ -1,28 +1,37 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 import '../models/project_model.dart';
 
 class AiInsightResult {
   final String summary;
   final bool usedAi;
   final String? note;
+  final String? modelUsed;
 
   const AiInsightResult({
     required this.summary,
     required this.usedAi,
     this.note,
+    this.modelUsed,
   });
 }
 
 class AiInsightService {
-  static const String _apiKey = 'AIzaSyD5q084VtJrWGDjl0Ocb_eF3x9eCFPIzSA';
+  static const List<String> _defaultModels = <String>[
+    'gemini-2.0-flash',
+    'gemini-2.5-flash',
+  ];
+  static const int _statusNotFound = 404;
+  static const int _statusTooManyRequests = 429;
 
   Future<AiInsightResult> generatePortfolioInsights(
     List<Project> projects,
   ) async {
     final fallback = _buildHeuristicSummary(projects);
+    final apiKey = AppConfig.geminiApiKey.trim();
 
-    if (_apiKey.isEmpty) {
+    if (apiKey.isEmpty) {
       return AiInsightResult(
         summary: fallback,
         usedAi: false,
@@ -31,65 +40,135 @@ class AiInsightService {
     }
 
     final prompt = _buildPrompt(projects);
-    try {
-      final response = await http.post(
-        Uri.parse(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_apiKey',
-        ),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'contents': [
-            {
-              'parts': [
-                {'text': prompt}
-              ]
-            }
-          ],
-          'generationConfig': {
-            'temperature': 0.2,
-            'maxOutputTokens': 220,
-          },
-        }),
+    String? lastError;
+
+    for (final model in _candidateModels()) {
+      final attempt = await _requestGemini(
+        model: model,
+        apiKey: apiKey,
+        prompt: prompt,
       );
+
+      if (attempt.text != null && attempt.text!.trim().isNotEmpty) {
+        return AiInsightResult(
+          summary: attempt.text!.trim(),
+          usedAi: true,
+          modelUsed: model,
+        );
+      }
+
+      if (attempt.statusCode == _statusNotFound) {
+        lastError = 'Gemini model "$model" was not found.';
+        continue;
+      }
+
+      lastError = attempt.error ??
+          (attempt.statusCode != null
+              ? 'Gemini API error (${attempt.statusCode}).'
+              : 'Gemini request failed.');
+      if (attempt.statusCode == _statusTooManyRequests) {
+        break;
+      }
+    }
+
+    return AiInsightResult(
+      summary: fallback,
+      usedAi: false,
+      note: '${lastError ?? 'Gemini request failed.'} Showing local heuristic summary.',
+    );
+  }
+
+  List<String> _candidateModels() {
+    final configured = AppConfig.geminiModel.trim();
+    final seen = <String>{};
+    return <String>[
+      if (configured.isNotEmpty) configured,
+      ..._defaultModels,
+    ].where(seen.add).toList();
+  }
+
+  Future<_GeminiAttempt> _requestGemini({
+    required String model,
+    required String apiKey,
+    required String prompt,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse(
+              'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey',
+            ),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'contents': [
+                {
+                  'parts': [
+                    {'text': prompt}
+                  ]
+                }
+              ],
+              'generationConfig': {
+                'temperature': 0.2,
+                'maxOutputTokens': 220,
+              },
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        return AiInsightResult(
-          summary: fallback,
-          usedAi: false,
-          note:
-              'Gemini API error (${response.statusCode}). Showing local heuristic summary.',
+        return _GeminiAttempt(
+          statusCode: response.statusCode,
+          error: _extractErrorMessage(response.body),
         );
       }
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final candidates = data['candidates'] as List<dynamic>?;
-      if (candidates == null || candidates.isEmpty) {
-        return AiInsightResult(
-          summary: fallback,
-          usedAi: false,
-          note: 'Gemini returned no candidates. Showing local heuristic summary.',
-        );
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) {
+        return const _GeminiAttempt(error: 'Gemini returned an invalid response format.');
       }
 
-      final content = candidates.first['content'] as Map<String, dynamic>?;
-      final parts = content?['parts'] as List<dynamic>?;
-      final text = parts?.isNotEmpty == true ? parts!.first['text'] as String? : null;
-      if (text == null || text.trim().isEmpty) {
-        return AiInsightResult(
-          summary: fallback,
-          usedAi: false,
-          note: 'Gemini returned empty text. Showing local heuristic summary.',
-        );
+      final candidates = data['candidates'];
+      if (candidates is! List || candidates.isEmpty) {
+        return const _GeminiAttempt(error: 'Gemini returned no candidates.');
       }
 
-      return AiInsightResult(summary: text.trim(), usedAi: true);
-    } catch (_) {
-      return AiInsightResult(
-        summary: fallback,
-        usedAi: false,
-        note: 'Gemini request failed. Showing local heuristic summary.',
-      );
+      for (final candidate in candidates) {
+        if (candidate is! Map<String, dynamic>) continue;
+        final content = candidate['content'];
+        if (content is! Map<String, dynamic>) continue;
+        final parts = content['parts'];
+        if (parts is! List) continue;
+        for (final part in parts) {
+          if (part is! Map<String, dynamic>) continue;
+          final text = part['text'];
+          if (text is String && text.trim().isNotEmpty) {
+            return _GeminiAttempt(text: text);
+          }
+        }
+      }
+
+      return const _GeminiAttempt(error: 'Gemini returned empty text.');
+    } catch (error) {
+      return _GeminiAttempt(error: error.toString());
     }
+  }
+
+  String _extractErrorMessage(String body) {
+    try {
+      final data = jsonDecode(body);
+      if (data is Map<String, dynamic>) {
+        final error = data['error'];
+        if (error is Map<String, dynamic>) {
+          final message = error['message'];
+          if (message is String && message.trim().isNotEmpty) {
+            return message.trim();
+          }
+        }
+      }
+    } catch (_) {
+      // Ignore parse errors and return generic message below.
+    }
+    return 'Gemini request failed.';
   }
 
   String _buildPrompt(List<Project> projects) {
@@ -154,4 +233,16 @@ Limit to 130 words total.
         'request updates from agencies for unverified projects, and increase community check-ins in weak-coverage areas. '
         'Data note: this summary is based on $totalCheckIns recorded check-ins and may not reflect all on-ground changes.';
   }
+}
+
+class _GeminiAttempt {
+  final String? text;
+  final int? statusCode;
+  final String? error;
+
+  const _GeminiAttempt({
+    this.text,
+    this.statusCode,
+    this.error,
+  });
 }

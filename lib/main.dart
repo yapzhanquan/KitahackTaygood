@@ -14,13 +14,32 @@ import 'screens/main_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase only in firebase mode
-  if (AppConfig.dataMode == DataMode.firebase) {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+  final runtimeMode = await _resolveRuntimeDataMode();
+  AppConfig.setRuntimeDataMode(runtimeMode);
 
-    // Connect to emulators if enabled
+  runApp(ProjekWatchApp(runtimeMode: runtimeMode));
+}
+
+Future<DataMode> _resolveRuntimeDataMode() async {
+  if (AppConfig.dataMode != DataMode.firebase) {
+    return DataMode.mock;
+  }
+
+  if (!DefaultFirebaseOptions.isConfigured) {
+    debugPrint(
+      'DATA_MODE=firebase requested but firebase_options.dart has placeholder '
+      'values. Falling back to mock mode.',
+    );
+    return DataMode.mock;
+  }
+
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+
     if (AppConfig.useEmulators) {
       FirebaseFirestore.instance.useFirestoreEmulator(
         AppConfig.emulatorHost,
@@ -35,20 +54,29 @@ void main() async {
         AppConfig.storagePort,
       );
     }
-  }
 
-  runApp(const ProjekWatchApp());
+    return DataMode.firebase;
+  } catch (error) {
+    debugPrint('Firebase initialization failed ($error). Falling back to mock mode.');
+    return DataMode.mock;
+  }
 }
 
 class ProjekWatchApp extends StatelessWidget {
-  const ProjekWatchApp({super.key});
+  final DataMode runtimeMode;
+
+  const ProjekWatchApp({super.key, required this.runtimeMode});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ProjectProvider()),
-        ChangeNotifierProvider(create: (_) => app_auth.AuthProvider()),
+        ChangeNotifierProvider(
+          create: (_) => ProjectProvider(dataMode: runtimeMode),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => app_auth.AuthProvider(dataMode: runtimeMode),
+        ),
       ],
       child: MaterialApp(
         title: 'ProjekWatch',

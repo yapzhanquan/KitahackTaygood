@@ -90,7 +90,8 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
       String? photoUrl;
 
       // Upload photo if picked and in firebase mode
-      if (_pickedImage != null && AppConfig.dataMode == DataMode.firebase) {
+      if (_pickedImage != null &&
+          AppConfig.runtimeDataMode == DataMode.firebase) {
         final auth = context.read<app_auth.AuthProvider>();
         final userId = auth.currentUser?.id ?? 'anonymous';
         photoUrl = await StorageService().uploadCheckInPhoto(

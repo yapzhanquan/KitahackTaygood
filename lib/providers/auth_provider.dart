@@ -12,6 +12,7 @@ class AuthProvider extends ChangeNotifier {
   // SDK in mock mode (which would crash without Firebase.initializeApp).
   AuthService? _authService;
   FirestoreService? _firestoreService;
+  final DataMode _dataMode;
 
   AuthService get _auth => _authService ??= AuthService();
   FirestoreService get _fs => _firestoreService ??= FirestoreService();
@@ -22,8 +23,9 @@ class AuthProvider extends ChangeNotifier {
   StreamSubscription? _authSub;
   StreamSubscription? _bookmarkSub;
 
-  AuthProvider() {
-    if (AppConfig.dataMode == DataMode.firebase) {
+  AuthProvider({DataMode? dataMode})
+      : _dataMode = dataMode ?? AppConfig.runtimeDataMode {
+    if (_dataMode == DataMode.firebase) {
       _authSub = _auth.authStateChanges.listen(_onAuthChanged);
     }
   }
@@ -43,6 +45,18 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      if (_dataMode != DataMode.firebase) {
+        _currentUser ??= AppUser(
+          id: 'mock-user',
+          name: 'Demo User',
+          email: 'demo@projekwatch.local',
+          role: 'user',
+          createdAt: DateTime.now(),
+        );
+        notifyListeners();
+        return true;
+      }
+
       final user = await _auth.signInWithGoogle();
       if (user != null) {
         _currentUser = user;
@@ -58,7 +72,9 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    await _auth.signOut();
+    if (_dataMode == DataMode.firebase) {
+      await _auth.signOut();
+    }
     _currentUser = null;
     _bookmarks = {};
     _bookmarkSub?.cancel();
@@ -70,6 +86,16 @@ class AuthProvider extends ChangeNotifier {
   Future<void> toggleBookmark(String projectId) async {
     final userId = _currentUser?.id;
     if (userId == null) return;
+
+    if (_dataMode != DataMode.firebase) {
+      if (_bookmarks.contains(projectId)) {
+        _bookmarks.remove(projectId);
+      } else {
+        _bookmarks.add(projectId);
+      }
+      notifyListeners();
+      return;
+    }
 
     // Optimistic update
     if (_bookmarks.contains(projectId)) {
@@ -118,6 +144,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _listenToBookmarks(String userId) {
+    if (_dataMode != DataMode.firebase) return;
     _bookmarkSub?.cancel();
     _bookmarkSub = _fs.streamBookmarks(userId).listen(
       (bookmarks) {

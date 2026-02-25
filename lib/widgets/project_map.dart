@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../config/app_config.dart';
 
 /// A Google Map widget that displays a project location marker.
@@ -21,45 +23,49 @@ class ProjectMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // If Google Maps is not enabled, show the styled placeholder
+    // If Google Maps is not enabled, show the styled placeholder.
     if (!AppConfig.googleMapsEnabled) {
-      return _buildPlaceholder();
+      return _buildPlaceholder(
+        reason:
+            'Map preview is disabled. Run with --dart-define=GOOGLE_MAPS_ENABLED=true after adding platform API keys.',
+      );
     }
 
-    // Google Maps integration
-    // NOTE: google_maps_flutter requires platform-specific setup:
-    // - Android: API key in AndroidManifest.xml
-    // - iOS: API key in AppDelegate.swift
-    // When those are configured, set AppConfig.googleMapsEnabled = true
-    // and uncomment the GoogleMap widget below.
-    //
-    // return SizedBox(
-    //   height: height,
-    //   child: ClipRRect(
-    //     borderRadius: BorderRadius.circular(16),
-    //     child: GoogleMap(
-    //       initialCameraPosition: CameraPosition(
-    //         target: LatLng(latitude, longitude),
-    //         zoom: 15,
-    //       ),
-    //       markers: {
-    //         Marker(
-    //           markerId: MarkerId(projectName),
-    //           position: LatLng(latitude, longitude),
-    //           infoWindow: InfoWindow(title: projectName),
-    //         ),
-    //       },
-    //       myLocationButtonEnabled: false,
-    //       zoomControlsEnabled: false,
-    //       mapToolbarEnabled: false,
-    //     ),
-    //   ),
-    // );
+    final supportsInteractiveMap = kIsWeb ||
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+    if (!supportsInteractiveMap) {
+      return _buildPlaceholder(
+        reason:
+            'Interactive map is currently supported on Android, iOS, and web.',
+      );
+    }
 
-    return _buildPlaceholder();
+    return SizedBox(
+      height: height,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: LatLng(latitude, longitude),
+            zoom: 15,
+          ),
+          markers: {
+            Marker(
+              markerId: MarkerId(projectName),
+              position: LatLng(latitude, longitude),
+              infoWindow: InfoWindow(title: projectName),
+            ),
+          },
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: false,
+          mapToolbarEnabled: false,
+        ),
+      ),
+    );
   }
 
-  Widget _buildPlaceholder() {
+  Widget _buildPlaceholder({String? reason}) {
     return Container(
       height: height,
       decoration: BoxDecoration(
@@ -115,6 +121,27 @@ class ProjectMap extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (reason != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      reason,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

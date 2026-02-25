@@ -3,7 +3,7 @@
 ## 1) AI Feature (Implemented)
 - Feature: `AI Portfolio Summary` in the `Insights` tab.
 - What it does:
-  - Uses Google Gemini (`gemini-1.5-flash`) to summarize portfolio health, risks, and immediate actions.
+  - Uses Google Gemini (configurable model; default `gemini-2.0-flash`) to summarize portfolio health, risks, and immediate actions.
   - Falls back to a local heuristic summary if Gemini key is missing or request fails.
 - Code:
   - `lib/services/ai_insight_service.dart`
@@ -12,6 +12,9 @@
 ### Run with Gemini
 ```bash
 flutter run --dart-define=GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+
+# Optional: pick a specific model
+flutter run --dart-define=GEMINI_API_KEY=YOUR_GEMINI_API_KEY --dart-define=GEMINI_MODEL=gemini-2.5-flash
 ```
 
 ## 3) Success Metrics & Scalability (Implemented + Pitch-ready)
