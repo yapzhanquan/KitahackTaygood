@@ -1,10 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'config/app_config.dart';
+import 'config/firebase_options.dart';
 import 'providers/project_provider.dart';
+import 'providers/auth_provider.dart' as app_auth;
 import 'screens/main_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase only in firebase mode
+  if (AppConfig.dataMode == DataMode.firebase) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    // Connect to emulators if enabled
+    if (AppConfig.useEmulators) {
+      FirebaseFirestore.instance.useFirestoreEmulator(
+        AppConfig.emulatorHost,
+        AppConfig.firestorePort,
+      );
+      await FirebaseAuth.instance.useAuthEmulator(
+        AppConfig.emulatorHost,
+        AppConfig.authPort,
+      );
+      FirebaseStorage.instance.useStorageEmulator(
+        AppConfig.emulatorHost,
+        AppConfig.storagePort,
+      );
+    }
+  }
+
   runApp(const ProjekWatchApp());
 }
 
@@ -13,8 +45,11 @@ class ProjekWatchApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ProjectProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ProjectProvider()),
+        ChangeNotifierProvider(create: (_) => app_auth.AuthProvider()),
+      ],
       child: MaterialApp(
         title: 'ProjekWatch',
         debugShowCheckedModeBanner: false,
@@ -77,4 +112,3 @@ class ProjekWatchApp extends StatelessWidget {
     );
   }
 }
-

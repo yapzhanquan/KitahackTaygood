@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/project_provider.dart';
+import '../providers/auth_provider.dart' as app_auth;
 import '../models/project_model.dart';
 import '../widgets/hero_search_bar.dart';
 import '../widgets/section_header.dart';
 import '../widgets/project_card.dart';
 import 'project_detail_page.dart';
+import 'add_checkin_page.dart';
+import 'sign_in_page.dart';
+import '../widgets/status_badge.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -82,38 +86,200 @@ class _MainPageState extends State<MainPage> {
           ),
           const Spacer(),
           // Contribute button
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A2E),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Contribute',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+          GestureDetector(
+            onTap: () => _onContributeTap(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A2E),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Contribute',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
           const SizedBox(width: 12),
           // Profile icon
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-            ),
-            child: const Icon(
-              Icons.person_outline_rounded,
-              size: 20,
-              color: Color(0xFF6B7280),
+          GestureDetector(
+            onTap: () => _onProfileTap(context),
+            child: Consumer<app_auth.AuthProvider>(
+              builder: (context, auth, _) {
+                if (auth.isSignedIn && auth.currentUser?.avatarUrl != null) {
+                  return CircleAvatar(
+                    radius: 18,
+                    backgroundImage:
+                        NetworkImage(auth.currentUser!.avatarUrl!),
+                    backgroundColor: const Color(0xFFF3F4F6),
+                  );
+                }
+                return Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF3F4F6),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: const Icon(
+                    Icons.person_outline_rounded,
+                    size: 20,
+                    color: Color(0xFF6B7280),
+                  ),
+                );
+              },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _onContributeTap(BuildContext context) async {
+    final auth = context.read<app_auth.AuthProvider>();
+    if (!auth.isSignedIn) {
+      final signedIn = await SignInPage.show(context);
+      if (!signedIn) return;
+    }
+    if (context.mounted) {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _ContributeSheet(),
+      );
+    }
+  }
+
+  void _onProfileTap(BuildContext context) {
+    final auth = context.read<app_auth.AuthProvider>();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD1D5DB),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                if (auth.isSignedIn) ...[
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundImage: auth.currentUser?.avatarUrl != null
+                        ? NetworkImage(auth.currentUser!.avatarUrl!)
+                        : null,
+                    backgroundColor: const Color(0xFFF3F4F6),
+                    child: auth.currentUser?.avatarUrl == null
+                        ? const Icon(Icons.person, size: 32)
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    auth.currentUser?.name ?? 'User',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  if (auth.currentUser?.email != null)
+                    Text(
+                      auth.currentUser!.email!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        auth.signOut();
+                        Navigator.pop(context);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFE5E7EB)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Sign Out',
+                        style: TextStyle(
+                          color: Color(0xFFEF4444),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  const Icon(Icons.person_outline_rounded,
+                      size: 48, color: Color(0xFF9CA3AF)),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Not signed in',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Sign in to contribute check-ins and bookmark projects.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await SignInPage.show(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1A1A2E),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Sign In',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -594,5 +760,123 @@ class _ConfidenceBar extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Bottom sheet shown when user taps "Contribute" (after auth).
+class _ContributeSheet extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.read<ProjectProvider>();
+    final projects = provider.allProjects;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1D5DB),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Contribute a Check-in',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Select a project to add your observation.',
+                style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 300,
+                child: ListView.separated(
+                  itemCount: projects.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (ctx, i) {
+                    final p = projects[i];
+                    return ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          _categoryIconFor(p.category),
+                          size: 20,
+                          color: const Color(0xFF6B7280),
+                        ),
+                      ),
+                      title: Text(
+                        p.name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      subtitle: Text(
+                        p.location,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF9CA3AF),
+                        ),
+                      ),
+                      trailing: StatusBadge(
+                          status: p.status,
+                          fontSize: 10,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2)),
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                AddCheckinPage(projectId: p.id),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _categoryIconFor(ProjectCategory cat) {
+    switch (cat) {
+      case ProjectCategory.housing:
+        return Icons.apartment_rounded;
+      case ProjectCategory.road:
+        return Icons.route_rounded;
+      case ProjectCategory.drainage:
+        return Icons.water_rounded;
+      case ProjectCategory.school:
+        return Icons.school_rounded;
+    }
   }
 }

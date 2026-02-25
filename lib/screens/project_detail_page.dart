@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/project_provider.dart';
+import '../providers/auth_provider.dart' as app_auth;
 import '../models/project_model.dart';
 import '../models/checkin_model.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/confidence_badge.dart';
+import '../widgets/project_map.dart';
 import 'add_checkin_page.dart';
+import 'sign_in_page.dart';
 
 class ProjectDetailPage extends StatelessWidget {
   final String projectId;
@@ -59,6 +63,7 @@ class ProjectDetailPage extends StatelessWidget {
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF1A1A2E),
                     actions: [
+                      // ── Share button ──
                       IconButton(
                         icon: Container(
                           padding: const EdgeInsets.all(6),
@@ -68,19 +73,34 @@ class ProjectDetailPage extends StatelessWidget {
                           ),
                           child: const Icon(Icons.share_outlined, size: 18),
                         ),
-                        onPressed: () {},
+                        onPressed: () => _shareProject(project),
                       ),
-                      IconButton(
-                        icon: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.bookmark_border_rounded,
-                              size: 18),
-                        ),
-                        onPressed: () {},
+                      // ── Bookmark button ──
+                      Consumer<app_auth.AuthProvider>(
+                        builder: (context, auth, _) {
+                          final isBookmarked =
+                              auth.isBookmarked(project.id);
+                          return IconButton(
+                            icon: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isBookmarked
+                                    ? Icons.bookmark_rounded
+                                    : Icons.bookmark_border_rounded,
+                                size: 18,
+                                color: isBookmarked
+                                    ? const Color(0xFF6366F1)
+                                    : null,
+                              ),
+                            ),
+                            onPressed: () =>
+                                _toggleBookmark(context, auth, project.id),
+                          );
+                        },
                       ),
                     ],
                     flexibleSpace: FlexibleSpaceBar(
@@ -203,6 +223,61 @@ class ProjectDetailPage extends StatelessWidget {
       },
     );
   }
+
+  // ── Action handlers ────────────────────────────────────────
+
+  void _shareProject(Project project) {
+    final shareText = '📍 ${project.name}\n'
+        '📌 ${project.location}\n'
+        '🏗 Status: ${project.status.label}\n'
+        '🔍 Confidence: ${project.confidence.label}\n\n'
+        '${project.description}\n\n'
+        'Tracked on ProjekWatch — community progress tracking';
+    Share.share(shareText);
+  }
+
+  void _toggleBookmark(
+      BuildContext context, app_auth.AuthProvider auth, String projectId) async {
+    if (!auth.isSignedIn) {
+      final signedIn = await SignInPage.show(context);
+      if (!signedIn) return;
+    }
+    auth.toggleBookmark(projectId);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            auth.isBookmarked(projectId)
+                ? 'Project bookmarked'
+                : 'Bookmark removed',
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _navigateToCheckin(BuildContext context, Project project) async {
+    final auth = context.read<app_auth.AuthProvider>();
+    if (!auth.isSignedIn) {
+      final signedIn = await SignInPage.show(context);
+      if (!signedIn) return;
+    }
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AddCheckinPage(projectId: project.id),
+        ),
+      );
+    }
+  }
+
+  // ── Section builders (unchanged layout) ────────────────────
 
   Widget _buildTitleSection(Project project, Color color) {
     return Padding(
@@ -514,55 +589,11 @@ class ProjectDetailPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          // Map placeholder
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Stack(
-              children: [
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.map_rounded,
-                          size: 48,
-                          color: Colors.grey.shade400),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${project.latitude.toStringAsFixed(4)}, ${project.longitude.toStringAsFixed(4)}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade500,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  top: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.open_in_full_rounded,
-                        size: 18, color: Color(0xFF1A1A2E)),
-                  ),
-                ),
-              ],
-            ),
+          // ── Real map widget (falls back to styled placeholder) ──
+          ProjectMap(
+            latitude: project.latitude,
+            longitude: project.longitude,
+            projectName: project.name,
           ),
         ],
       ),
@@ -647,14 +678,7 @@ class ProjectDetailPage extends StatelessWidget {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => AddCheckinPage(projectId: project.id),
-                  ),
-                );
-              },
+              onPressed: () => _navigateToCheckin(context, project),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1A1A2E),
                 foregroundColor: Colors.white,

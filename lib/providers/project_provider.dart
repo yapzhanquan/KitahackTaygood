@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/project_model.dart';
 import '../models/checkin_model.dart';
+import '../config/app_config.dart';
 import '../mock_data.dart';
+import '../repositories/project_repository.dart';
+import '../repositories/checkin_repository.dart';
 
 class ProjectProvider extends ChangeNotifier {
   List<Project> _projects = [];
@@ -10,11 +14,56 @@ class ProjectProvider extends ChangeNotifier {
   ProjectCategory? _categoryFilter;
   ProjectStatus? _statusFilter;
 
-  ProjectProvider() {
-    _projects = List.from(mockProjects);
+  final DataMode _dataMode;
+  StreamSubscription? _projectsSub;
+  // Lazily initialised — only created when dataMode == firebase.
+  late final ProjectRepository _projectRepo;
+  late final CheckinRepository _checkinRepo;
+
+  ProjectProvider({DataMode? dataMode})
+      : _dataMode = dataMode ?? AppConfig.dataMode {
+    if (_dataMode == DataMode.firebase) {
+      _projectRepo = ProjectRepository();
+      _checkinRepo = CheckinRepository();
+      _loadFromFirestore();
+    } else {
+      _projects = List.from(mockProjects);
+    }
   }
 
-  // ── Filters ──
+  // ── Firestore loading ──────────────────────────────────────
+
+  void _loadFromFirestore() {
+    _projectsSub = _projectRepo.streamProjects().listen(
+      (projects) {
+        _projects = projects;
+        // Load check-ins for each project
+        for (final project in _projects) {
+          _loadCheckInsForProject(project);
+        }
+        notifyListeners();
+      },
+      onError: (e) {
+        debugPrint('Error streaming projects: $e');
+        // Fallback to mock data if Firestore fails
+        _projects = List.from(mockProjects);
+        notifyListeners();
+      },
+    );
+  }
+
+  void _loadCheckInsForProject(Project project) {
+    _checkinRepo.streamCheckIns(project.id).listen(
+      (checkIns) {
+        project.checkIns.clear();
+        project.checkIns.addAll(checkIns);
+        _recalculateConfidence(project);
+        notifyListeners();
+      },
+    );
+  }
+
+  // ── Filters ──────────────────────────────────────────────
 
   String get searchQuery => _searchQuery;
   ProjectCategory? get categoryFilter => _categoryFilter;
@@ -42,7 +91,7 @@ class ProjectProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Filtered list ──
+  // ── Filtered list ──────────────────────────────────────────
 
   List<Project> get filteredProjects {
     return _projects.where((p) {
@@ -63,7 +112,7 @@ class ProjectProvider extends ChangeNotifier {
     }).toList();
   }
 
-  // ── Section-based getters ──
+  // ── Section-based getters ──────────────────────────────────
 
   List<Project> get activeProjects =>
       _projects.where((p) => p.status == ProjectStatus.active).toList();
@@ -77,19 +126,36 @@ class ProjectProvider extends ChangeNotifier {
   List<Project> get privateProjects =>
       _projects.where((p) => !p.isPublic).toList();
 
-  // ── Single project ──
+  // ── All projects (for map) ─────────────────────────────────
+
+  List<Project> get allProjects => List.unmodifiable(_projects);
+
+  // ── Single project ─────────────────────────────────────────
 
   Project getProjectById(String id) =>
       _projects.firstWhere((p) => p.id == id);
 
-  // ── Check-in management ──
+  // ── Check-in management ────────────────────────────────────
 
   void addCheckIn(String projectId, CheckIn checkIn) {
     final project = _projects.firstWhere((p) => p.id == projectId);
+
+    // Optimistic local update
     project.checkIns.insert(0, checkIn);
     project.status = checkIn.status;
     _recalculateConfidence(project);
     notifyListeners();
+
+    // Persist to Firestore if in firebase mode
+    if (_dataMode == DataMode.firebase) {
+      _checkinRepo.addCheckIn(projectId, checkIn).then((_) {
+        // Update project status in Firestore
+        _projectRepo.updateProjectStatus(
+            projectId, project.status, project.confidence);
+      }).catchError((e) {
+        debugPrint('Error persisting check-in: $e');
+      });
+    }
   }
 
   void _recalculateConfidence(Project project) {
@@ -118,5 +184,11 @@ class ProjectProvider extends ChangeNotifier {
     if (daysSinceLastCheckIn > 60) {
       project.confidence = ConfidenceLevel.low;
     }
+  }
+
+  @override
+  void dispose() {
+    _projectsSub?.cancel();
+    super.dispose();
   }
 }
