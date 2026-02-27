@@ -360,87 +360,80 @@ class ProjectDetailPage extends StatelessWidget {
   Widget _buildAgencySection(BuildContext context, Project project) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A2E).withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.business_rounded,
-              color: Color(0xFF1A1A2E),
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Managed by ${project.agencyOrDeveloper}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                  ),
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A2E).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  '${project.checkIns.length} community check-ins',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Developer info button
-          GestureDetector(
-            onTap: () {
-              final provider = context.read<ProjectProvider>();
-              provider.enrichDeveloperForProject(project.id);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      DeveloperDetailPage(projectId: project.id),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6366F1).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color:
-                      const Color(0xFF6366F1).withValues(alpha: 0.3),
+                child: const Icon(
+                  Icons.business_rounded,
+                  color: Color(0xFF1A1A2E),
+                  size: 26,
                 ),
               ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.person_search_rounded,
-                    size: 16,
-                    color: Color(0xFF6366F1),
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Developer',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF6366F1),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Managed by ${project.agencyOrDeveloper}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1A1A2E),
+                      ),
                     ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${project.checkIns.length} community check-ins',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // ── Developer info button (full width, prominent) ──
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                final provider = context.read<ProjectProvider>();
+                provider.enrichDeveloperForProject(project.id);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        DeveloperDetailPage(projectId: project.id),
                   ),
-                ],
+                );
+              },
+              icon: const Icon(Icons.person_search_rounded, size: 18),
+              label: const Text('View Developer Background'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
