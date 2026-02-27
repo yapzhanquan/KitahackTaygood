@@ -17,6 +17,7 @@ final List<Project> mockProjects = [
     imageUrl: 'assets/images/Harmoni_phase_2.jpg',
     expectedCompletion: DateTime(2027, 6, 15),
     agencyOrDeveloper: 'PR1MA Corporation',
+    developerWebsite: 'https://www.pr1ma.my',
     lastActivity: DateTime(2026, 2, 20),
     lastVerified: DateTime(2026, 2, 18),
     checkIns: [
@@ -65,6 +66,7 @@ final List<Project> mockProjects = [
     imageUrl: 'assets/images/Vista_Kota.jpg',
     expectedCompletion: DateTime(2027, 3, 1),
     agencyOrDeveloper: 'Mega Development Group',
+    developerWebsite: 'https://www.megadevelopment.com.my',
     lastActivity: DateTime(2026, 2, 5),
     lastVerified: DateTime(2026, 2, 12),
     checkIns: [
@@ -88,6 +90,7 @@ final List<Project> mockProjects = [
     imageUrl: 'assets/images/Katsuri.jpg',
     expectedCompletion: DateTime(2026, 9, 30),
     agencyOrDeveloper: 'SPNB (Syarikat Perumahan Negara)',
+    developerWebsite: 'https://www.spnb.com.my',
     lastActivity: DateTime(2026, 2, 21),
     lastVerified: DateTime(2026, 2, 21),
     checkIns: [
@@ -112,6 +115,7 @@ final List<Project> mockProjects = [
     imageUrl: 'assets/images/residence_cyberjaya.jpg',
     expectedCompletion: DateTime(2028, 1, 1),
     agencyOrDeveloper: 'Setia Haruman Sdn Bhd',
+    developerWebsite: 'https://www.setiaharuman.com',
     lastActivity: DateTime(2025, 11, 1),
     lastVerified: DateTime(2025, 11, 1),
     checkIns: [
@@ -654,6 +658,7 @@ final List<Project> mockProjects = [
     imageUrl: '',
     expectedCompletion: DateTime(2026, 11, 1),
     agencyOrDeveloper: 'EcoWorld Development',
+    developerWebsite: 'https://ecoworld.my',
     lastActivity: DateTime(2026, 2, 21),
     lastVerified: DateTime(2026, 2, 21),
     checkIns: [

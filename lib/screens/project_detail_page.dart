@@ -9,8 +9,10 @@ import '../models/checkin_model.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/confidence_badge.dart';
 import '../widgets/project_map.dart';
+import '../widgets/developer_enrichment_card.dart';
 import 'add_checkin_page.dart';
 import 'sign_in_page.dart';
+import 'developer_detail_page.dart';
 
 class ProjectDetailPage extends StatelessWidget {
   final String projectId;
@@ -173,7 +175,11 @@ class ProjectDetailPage extends StatelessWidget {
                           const _Divider(),
 
                           // Agency section (like Hosted by)
-                          _buildAgencySection(project),
+                          _buildAgencySection(context, project),
+                          const _Divider(),
+
+                          // Developer Background (Auto)
+                          _buildDeveloperSection(context, project),
                           const _Divider(),
 
                           // Highlights
@@ -351,7 +357,7 @@ class ProjectDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAgencySection(Project project) {
+  Widget _buildAgencySection(BuildContext context, Project project) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
@@ -393,8 +399,79 @@ class ProjectDetailPage extends StatelessWidget {
               ],
             ),
           ),
+          // Developer info button
+          GestureDetector(
+            onTap: () {
+              final provider = context.read<ProjectProvider>();
+              provider.enrichDeveloperForProject(project.id);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      DeveloperDetailPage(projectId: project.id),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color:
+                      const Color(0xFF6366F1).withValues(alpha: 0.3),
+                ),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.person_search_rounded,
+                    size: 16,
+                    color: Color(0xFF6366F1),
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Developer',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF6366F1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDeveloperSection(BuildContext context, Project project) {
+    // Auto-trigger enrichment on first view.
+    final provider = context.read<ProjectProvider>();
+    if (project.developerEnrichment == null) {
+      // Use addPostFrameCallback to avoid calling during build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        provider.enrichDeveloperForProject(project.id);
+      });
+    }
+
+    return DeveloperEnrichmentCard(
+      project: project,
+      onRefresh: () {
+        provider.enrichDeveloperForProject(project.id, forceRefresh: true);
+      },
+      onViewDetails: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DeveloperDetailPage(projectId: project.id),
+          ),
+        );
+      },
     );
   }
 
