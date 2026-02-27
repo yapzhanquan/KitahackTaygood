@@ -21,6 +21,8 @@ class StorageService {
     // Compress the image first
     final compressed = await _compressImage(imageFile);
     final fileToUpload = compressed ?? imageFile;
+    final fileExtension = _extensionForUpload(fileToUpload.path);
+    final contentType = _contentTypeForExtension(fileExtension);
 
     // Validate size
     final fileSize = await fileToUpload.length();
@@ -30,12 +32,12 @@ class StorageService {
     }
 
     // Upload to Storage
-    final fileName = '${_uuid.v4()}.jpg';
+    final fileName = '${_uuid.v4()}.$fileExtension';
     final ref = _storage.ref().child('checkins/$userId/$projectId/$fileName');
 
     final uploadTask = ref.putFile(
       fileToUpload,
-      SettableMetadata(contentType: 'image/jpeg'),
+      SettableMetadata(contentType: contentType),
     );
 
     final snapshot = await uploadTask;
@@ -44,19 +46,54 @@ class StorageService {
 
   /// Compress image to reduce upload size and bandwidth.
   Future<File?> _compressImage(File file) async {
-    final filePath = file.absolute.path;
-    final lastDot = filePath.lastIndexOf('.');
-    final targetPath =
-        '${filePath.substring(0, lastDot)}_compressed.jpg';
+    try {
+      final filePath = file.absolute.path;
+      final lastDot = filePath.lastIndexOf('.');
+      final basePath =
+          (lastDot > 0) ? filePath.substring(0, lastDot) : filePath;
+      final targetPath = '${basePath}_compressed.jpg';
 
-    final result = await FlutterImageCompress.compressAndGetFile(
-      filePath,
-      targetPath,
-      quality: 70,
-      minWidth: 1200,
-      minHeight: 1200,
-    );
+      final result = await FlutterImageCompress.compressAndGetFile(
+        filePath,
+        targetPath,
+        quality: 70,
+        minWidth: 1200,
+        minHeight: 1200,
+      );
 
-    return result != null ? File(result.path) : null;
+      return result != null ? File(result.path) : null;
+    } catch (_) {
+      // If compression fails for an unsupported format, upload the original.
+      return null;
+    }
+  }
+
+  String _extensionForUpload(String path) {
+    final lastDot = path.lastIndexOf('.');
+    if (lastDot < 0 || lastDot == path.length - 1) {
+      return 'jpg';
+    }
+
+    final ext = path.substring(lastDot + 1).toLowerCase();
+    if (ext == 'jpeg') return 'jpg';
+    if (ext == 'png' || ext == 'webp' || ext == 'heic' || ext == 'heif') {
+      return ext;
+    }
+    return 'jpg';
+  }
+
+  String _contentTypeForExtension(String extension) {
+    switch (extension) {
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'heic':
+        return 'image/heic';
+      case 'heif':
+        return 'image/heif';
+      default:
+        return 'image/jpeg';
+    }
   }
 }

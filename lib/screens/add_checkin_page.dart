@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
@@ -9,6 +10,8 @@ import '../models/project_model.dart';
 import '../models/checkin_model.dart';
 import '../config/app_config.dart';
 import '../services/storage_service.dart';
+
+enum _ImageSourceOption { camera, gallery, files }
 
 class AddCheckinPage extends StatefulWidget {
   final String projectId;
@@ -36,7 +39,7 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
   }
 
   Future<void> _pickImage() async {
-    final source = await showModalBottomSheet<ImageSource>(
+    final source = await showModalBottomSheet<_ImageSourceOption>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
@@ -45,12 +48,17 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
             ListTile(
               leading: const Icon(Icons.camera_alt_rounded),
               title: const Text('Take Photo'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              onTap: () => Navigator.pop(ctx, _ImageSourceOption.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_rounded),
               title: const Text('Choose from Gallery'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              onTap: () => Navigator.pop(ctx, _ImageSourceOption.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.folder_rounded),
+              title: const Text('Choose from Files (Downloads)'),
+              onTap: () => Navigator.pop(ctx, _ImageSourceOption.files),
             ),
           ],
         ),
@@ -59,9 +67,16 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
 
     if (source == null) return;
 
+    if (source == _ImageSourceOption.files) {
+      await _pickImageFromFiles();
+      return;
+    }
+
     try {
       final picked = await _imagePicker.pickImage(
-        source: source,
+        source: source == _ImageSourceOption.camera
+            ? ImageSource.camera
+            : ImageSource.gallery,
         maxWidth: 1200,
         maxHeight: 1200,
         imageQuality: 80,
@@ -70,14 +85,52 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
         setState(() => _pickedImage = File(picked.path));
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not pick image: $e'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      _showImageError('Could not pick image: $e');
+    }
+  }
+
+  Future<void> _pickImageFromFiles() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: false,
+      );
+
+      if (result == null) return;
+
+      final selectedPath = result.files.single.path;
+      if (selectedPath == null) {
+        _showImageError('Could not read selected file path.');
+        return;
       }
+
+      setState(() => _pickedImage = File(selectedPath));
+    } catch (e) {
+      _showImageError('Could not pick image from files: $e');
+    }
+  }
+
+  void _showImageError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _statusDescription(ProjectStatus status) {
+    switch (status) {
+      case ProjectStatus.active:
+        return 'Work is clearly progressing';
+      case ProjectStatus.slowing:
+        return 'Some work but pace has reduced';
+      case ProjectStatus.stalled:
+        return 'No visible work activity';
+      case ProjectStatus.unverified:
+        return 'Unable to determine status';
     }
   }
 
@@ -127,16 +180,15 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
           SnackBar(
             content: const Row(
               children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 20),
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                 SizedBox(width: 8),
                 Text('Check-in submitted successfully!'),
               ],
             ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: const Color(0xFF22C55E),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -229,7 +281,8 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A2E).withValues(alpha: 0.08),
+                          color:
+                              const Color(0xFF1A1A2E).withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(Icons.business_rounded,
@@ -356,10 +409,9 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
               controller: _noteController,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText:
-                    'Describe what you saw at the site (required)...',
-                hintStyle: const TextStyle(
-                    color: Color(0xFF9CA3AF), fontSize: 14),
+                hintText: 'Describe what you saw at the site (required)...',
+                hintStyle:
+                    const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -456,7 +508,7 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
                             ),
                             const SizedBox(height: 2),
                             const Text(
-                              'Take a photo or choose from gallery',
+                              'Take a photo, gallery, or Downloads file',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF9CA3AF),
@@ -538,18 +590,5 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
         ),
       ),
     );
-  }
-
-  String _statusDescription(ProjectStatus status) {
-    switch (status) {
-      case ProjectStatus.active:
-        return 'Work is clearly progressing';
-      case ProjectStatus.slowing:
-        return 'Some work but pace has reduced';
-      case ProjectStatus.stalled:
-        return 'No visible work activity';
-      case ProjectStatus.unverified:
-        return 'Unable to determine status';
-    }
   }
 }

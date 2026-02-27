@@ -47,6 +47,7 @@ dependencies:
 
   # Image picking & compression
   image_picker: ^1.1.2
+  file_picker: ^8.1.7
   flutter_image_compress: ^2.3.0
 
   # Sharing
