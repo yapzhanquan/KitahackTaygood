@@ -1,4 +1,5 @@
 import 'checkin_model.dart';
+import 'developer_enrichment_model.dart';
 
 enum ProjectCategory { housing, road, drainage, school }
 
@@ -66,6 +67,8 @@ class Project {
   final double latitude;
   final double longitude;
   final bool isPublic;
+  final String? developerWebsite;
+  DeveloperEnrichment? developerEnrichment;
 
   Project({
     required this.id,
@@ -84,6 +87,8 @@ class Project {
     required this.latitude,
     required this.longitude,
     required this.isPublic,
+    this.developerWebsite,
+    this.developerEnrichment,
   });
 
   // ── Firestore serialization ─────────────────────────────────
@@ -119,6 +124,11 @@ class Project {
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
       isPublic: json['isPublic'] as bool? ?? true,
+      developerWebsite: json['developerWebsite'] as String?,
+      developerEnrichment: json['developerEnrichment'] != null
+          ? DeveloperEnrichment.fromJson(
+              json['developerEnrichment'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -137,5 +147,7 @@ class Project {
         'latitude': latitude,
         'longitude': longitude,
         'isPublic': isPublic,
+        'developerWebsite': developerWebsite,
+        'developerEnrichment': developerEnrichment?.toJson(),
       };
 }

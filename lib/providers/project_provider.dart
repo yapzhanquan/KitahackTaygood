@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/project_model.dart';
 import '../models/checkin_model.dart';
+import '../models/developer_enrichment_model.dart';
 import '../config/app_config.dart';
 import '../mock_data.dart';
 import '../repositories/project_repository.dart';
@@ -184,6 +185,200 @@ class ProjectProvider extends ChangeNotifier {
     if (daysSinceLastCheckIn > 60) {
       project.confidence = ConfidenceLevel.low;
     }
+  }
+
+  // ── Developer Enrichment ─────────────────────────────────────
+  //
+  // Limits & Compliance:
+  // • Link-first approach: generates search URLs only, no scraping.
+  // • Respects robots.txt / ToS — no login, CAPTCHA, or paywall bypass.
+  // • No copyrighted article storage — only title + canonical URL.
+  // • Every source includes: url (sourceUrl), type (sourceType),
+  //   fetchedAt, confidence (confidenceScore).
+
+  /// Enriches developer background data for the given project.
+  /// Uses a 7-day cache — will not refetch unless [forceRefresh] is true.
+  Future<void> enrichDeveloperForProject(
+    String projectId, {
+    bool forceRefresh = false,
+  }) async {
+    final project = _projects.firstWhere(
+      (p) => p.id == projectId,
+      orElse: () => throw StateError('Project $projectId not found'),
+    );
+
+    final devName = project.agencyOrDeveloper;
+
+    // No developer name → mark limited and exit gracefully.
+    if (devName.isEmpty) {
+      debugPrint('[DevEnrich] No developer name for project $projectId');
+      project.developerEnrichment = DeveloperEnrichment(
+        status: EnrichmentStatus.limited,
+        lastUpdated: DateTime.now(),
+        summary: 'No developer/agency name available.',
+        riskFlags: ['No developer information on record'],
+      );
+      notifyListeners();
+      return;
+    }
+
+    // 7-day cache check.
+    final existing = project.developerEnrichment;
+    if (!forceRefresh &&
+        existing != null &&
+        existing.lastUpdated != null &&
+        DateTime.now().difference(existing.lastUpdated!).inDays < 7 &&
+        existing.status != EnrichmentStatus.error) {
+      debugPrint('[DevEnrich] Cache still valid for "$devName" — skipping.');
+      return;
+    }
+
+    // Set loading state.
+    project.developerEnrichment = DeveloperEnrichment(
+      status: EnrichmentStatus.loading,
+      lastUpdated: existing?.lastUpdated,
+      summary: existing?.summary ?? '',
+      riskFlags: existing?.riskFlags,
+      sources: existing?.sources,
+    );
+    notifyListeners();
+
+    try {
+      // Simulate async work (network delay in a real implementation).
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      final now = DateTime.now();
+      final encodedName = Uri.encodeComponent(devName);
+      final sources = <DeveloperSourceItem>[];
+
+      // 1. Official website (if available).
+      if (project.developerWebsite != null &&
+          project.developerWebsite!.isNotEmpty) {
+        sources.add(DeveloperSourceItem(
+          type: SourceType.official,
+          title: '$devName — Official Website',
+          url: project.developerWebsite!,
+          confidence: 0.9,
+          fetchedAt: now,
+          notes: 'Developer-provided URL.',
+        ));
+      }
+
+      // 2. Google search for the developer.
+      sources.add(DeveloperSourceItem(
+        type: SourceType.official,
+        title: 'Google Search: $devName',
+        url: 'https://www.google.com/search?q=$encodedName+Malaysia+developer',
+        confidence: 0.5,
+        fetchedAt: now,
+        notes: 'Generated search link — manual review recommended.',
+      ));
+
+      // 3. SSM (Companies Commission of Malaysia) search.
+      sources.add(DeveloperSourceItem(
+        type: SourceType.filing,
+        title: 'SSM Company Search: $devName',
+        url: 'https://www.ssm.com.my/Pages/e-Search.aspx',
+        confidence: 0.6,
+        fetchedAt: now,
+        notes: 'Search SSM portal for company filings. Manual review required.',
+      ));
+
+      // 4. Google News search.
+      sources.add(DeveloperSourceItem(
+        type: SourceType.news,
+        title: 'Recent News: $devName',
+        url:
+            'https://news.google.com/search?q=$encodedName+Malaysia&hl=en-MY',
+        confidence: 0.5,
+        sentiment: SourceSentiment.neu,
+        fetchedAt: now,
+        notes: 'Google News results — review for positive/negative coverage.',
+      ));
+
+      // 5. Google search for quarterly/annual reports.
+      sources.add(DeveloperSourceItem(
+        type: SourceType.filing,
+        title: 'Public Reports: $devName',
+        url:
+            'https://www.google.com/search?q=$encodedName+annual+report+filetype:pdf',
+        confidence: 0.4,
+        fetchedAt: now,
+        notes: 'Search for publicly available PDF reports.',
+      ));
+
+      // 6. Public review signals (Google Reviews).
+      sources.add(DeveloperSourceItem(
+        type: SourceType.review,
+        title: 'Google Reviews: $devName',
+        url: 'https://www.google.com/search?q=$encodedName+reviews',
+        confidence: 0.4,
+        sentiment: SourceSentiment.neu,
+        fetchedAt: now,
+        notes: 'Public search link — no ToS-restricted scraping.',
+      ));
+
+      // ── Generate risk flags from project heuristics ──
+      final riskFlags = <String>[];
+
+      if (project.status == ProjectStatus.stalled) {
+        riskFlags.add(
+            '⚠️ Project currently stalled — investigate developer capacity');
+      }
+
+      if (project.expectedCompletion != null &&
+          project.expectedCompletion!.isBefore(now)) {
+        final overdueDays =
+            now.difference(project.expectedCompletion!).inDays;
+        riskFlags.add(
+            '⏰ Project overdue by $overdueDays days — review timeline commitment');
+      }
+
+      final daysSinceActivity = now.difference(project.lastActivity).inDays;
+      if (daysSinceActivity > 30) {
+        riskFlags.add(
+            '📅 No activity for $daysSinceActivity days — consider reaching out');
+      }
+
+      if (project.confidence == ConfidenceLevel.low) {
+        riskFlags.add(
+            '🔍 Low verification confidence — more community check-ins needed');
+      }
+
+      if (project.developerWebsite == null ||
+          project.developerWebsite!.isEmpty) {
+        riskFlags.add(
+            '🌐 No official website on file — limited online presence data');
+      }
+
+      final summary = riskFlags.isEmpty
+          ? '$devName — no significant risk flags detected from available data.'
+          : '$devName — ${riskFlags.length} risk flag(s) identified. Review sources for details.';
+
+      project.developerEnrichment = DeveloperEnrichment(
+        status: riskFlags.isEmpty
+            ? EnrichmentStatus.ready
+            : EnrichmentStatus.limited,
+        lastUpdated: now,
+        summary: summary,
+        riskFlags: riskFlags,
+        sources: sources,
+      );
+
+      debugPrint(
+          '[DevEnrich] Enrichment complete for "$devName" — '
+          '${sources.length} sources, ${riskFlags.length} risk flags.');
+    } catch (e) {
+      debugPrint('[DevEnrich] Error enriching "$devName": $e');
+      project.developerEnrichment = DeveloperEnrichment(
+        status: EnrichmentStatus.error,
+        lastUpdated: DateTime.now(),
+        summary: 'Failed to generate enrichment data: $e',
+        riskFlags: ['❌ Enrichment failed — try again later'],
+      );
+    }
+
+    notifyListeners();
   }
 
   @override

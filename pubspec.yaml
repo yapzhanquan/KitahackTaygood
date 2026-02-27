@@ -53,6 +53,9 @@ dependencies:
   # Sharing
   share_plus: ^10.1.4
 
+  # URL launcher (for developer enrichment links)
+  url_launcher: ^6.2.5
+
   # Geolocation (optional, for future use)
   geolocator: ^13.0.2
 
