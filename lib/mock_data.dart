@@ -1,5 +1,88 @@
 import 'models/project_model.dart';
 import 'models/checkin_model.dart';
+import 'data/services/location_image_service.dart';
+
+// Location Image Service instance for generating area-specific imagery
+final _imageService = LocationImageService();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOCK SCRAPED SOURCES - Simulated data from various platforms
+// ─────────────────────────────────────────────────────────────────────────────
+
+final _sourcePropertyGuru = ScrapedSource(
+  id: 'src_pg_001',
+  title: 'Residensi Harmoni Review Thread',
+  url: 'https://www.propertyguru.com.my/property-news/residensi-harmoni-2026',
+  type: SourceType.forum,
+  scrapedAt: DateTime(2026, 2, 15),
+  snippet: '14 user reviews collected, avg rating 4.2/5',
+  domain: 'propertyguru.com.my',
+);
+
+final _sourceLowyat = ScrapedSource(
+  id: 'src_ly_001',
+  title: 'PR1MA Projects Discussion',
+  url: 'https://forum.lowyat.net/topic/5234567/prima-harmoni-progress',
+  type: SourceType.forum,
+  scrapedAt: DateTime(2026, 2, 10),
+  snippet: 'Active discussion thread with 47 pages',
+  domain: 'lowyat.net',
+);
+
+final _sourceNST = ScrapedSource(
+  id: 'src_nst_001',
+  title: 'PR1MA On Track for 2027 Delivery',
+  url: 'https://www.nst.com.my/property/2026/01/prima-harmoni-delivery',
+  type: SourceType.news,
+  scrapedAt: DateTime(2026, 1, 28),
+  snippet: 'Official press release confirms structural completion at 70%',
+  domain: 'nst.com.my',
+);
+
+final _sourceMOF = ScrapedSource(
+  id: 'src_mof_001',
+  title: 'Housing Project Database Entry',
+  url: 'https://www.mof.gov.my/arkib/perumahan/pr1ma-2026',
+  type: SourceType.government,
+  scrapedAt: DateTime(2026, 2, 1),
+  snippet: 'Ministry of Finance project registry',
+  domain: 'mof.gov.my',
+);
+
+final _sourceBinaMegah = ScrapedSource(
+  id: 'src_bm_001',
+  title: 'Taman Melati Official Launch',
+  url: 'https://binamegah.com.my/projects/taman-melati',
+  type: SourceType.developer,
+  scrapedAt: DateTime(2025, 6, 1),
+  snippet: 'Developer claims 85% completion - OUTDATED',
+  domain: 'binamegah.com.my',
+);
+
+final _sourceEdgeProp = ScrapedSource(
+  id: 'src_ep_001',
+  title: 'Bina Megah faces legal action',
+  url: 'https://www.edgeprop.my/content/bina-megah-lawsuit-2025',
+  type: SourceType.news,
+  scrapedAt: DateTime(2025, 11, 20),
+  snippet: 'Buyers file class action lawsuit for project delays',
+  domain: 'edgeprop.my',
+);
+
+final _sourceSSM = ScrapedSource(
+  id: 'src_ssm_001',
+  title: 'Company Registry - Bina Megah',
+  url: 'https://www.ssm.com.my/company/bina-megah-123456',
+  type: SourceType.government,
+  scrapedAt: DateTime(2026, 1, 5),
+  snippet: 'Financial statements show negative cash flow',
+  domain: 'ssm.com.my',
+);
+
+// Helper to generate location-based images
+String _getMarketingImg(String location, String id) => _imageService.getMarketingImage(location, id);
+String _getConstructionImg(String location, String id) => _imageService.getConstructionSiteImage(location, id);
+String _getStalledImg(String location, String id) => _imageService.getStalledSiteImage(location, id);
 
 final List<Project> mockProjects = [
   // ── Housing Projects ──
@@ -14,20 +97,63 @@ final List<Project> mockProjects = [
         'A 30-storey affordable housing project under RUMAWIP, featuring 450 units ranging from 800–1000 sq ft. '
         'Amenities include a swimming pool, gymnasium, surau, and playground. '
         'Currently in structural phase with columns rising on floors 18–22.',
-    imageUrl: 'assets/images/Harmoni_phase_2.jpg',
+    // Location-based marketing image for Petaling Jaya
+    imageUrl: _getMarketingImg('Petaling Jaya, Selangor', 'p1'),
     expectedCompletion: DateTime(2027, 6, 15),
     agencyOrDeveloper: 'PR1MA Corporation',
     developerWebsite: 'https://www.pr1ma.my',
     lastActivity: DateTime(2026, 2, 20),
     lastVerified: DateTime(2026, 2, 18),
     checkIns: [
-      CheckIn(id: 'c1a', projectId: 'p1', status: ProjectStatus.active, note: 'Crane active, workers on site, floor 20 being poured.', timestamp: DateTime(2026, 2, 18), reporterName: 'Ahmad R.'),
-      CheckIn(id: 'c1b', projectId: 'p1', status: ProjectStatus.active, note: 'Concrete trucks delivering since morning. Good pace.', timestamp: DateTime(2026, 2, 10), reporterName: 'Siti N.'),
-      CheckIn(id: 'c1c', projectId: 'p1', status: ProjectStatus.active, note: 'Scaffolding going up on east wing.', timestamp: DateTime(2026, 1, 28), reporterName: 'Raj K.'),
+      // Check-ins use PJ area construction site photos
+      CheckIn(id: 'CHK-P1-2026-0218', projectId: 'p1', status: ProjectStatus.active, note: 'Crane active, workers on site, floor 20 being poured.', timestamp: DateTime(2026, 2, 18), reporterName: 'Ahmad R.', photoUrl: _getConstructionImg('Petaling Jaya, Selangor', 'CHK-P1-2026-0218')),
+      CheckIn(id: 'CHK-P1-2026-0210', projectId: 'p1', status: ProjectStatus.active, note: 'Concrete trucks delivering since morning. Good pace.', timestamp: DateTime(2026, 2, 10), reporterName: 'Siti N.', photoUrl: _getConstructionImg('Petaling Jaya, Selangor', 'CHK-P1-2026-0210')),
+      CheckIn(id: 'CHK-P1-2026-0128', projectId: 'p1', status: ProjectStatus.active, note: 'Scaffolding going up on east wing.', timestamp: DateTime(2026, 1, 28), reporterName: 'Raj K.', photoUrl: _getConstructionImg('Petaling Jaya, Selangor', 'CHK-P1-2026-0128')),
     ],
     latitude: 3.1073,
     longitude: 101.6067,
     isPublic: false,
+    progressPercentage: 72,
+    riskLevel: RiskLevel.low,
+    developerScore: 4.2,
+    sentimentScore: 0.85,
+    scrapedSources: [_sourcePropertyGuru, _sourceLowyat, _sourceNST, _sourceMOF],
+    officialMilestones: [
+      OfficialMilestone(
+        description: 'Structural work floor 20 completed',
+        claimedProgress: 77,
+        date: DateTime(2026, 1, 15),
+        source: _sourceNST,
+      ),
+      OfficialMilestone(
+        description: 'M&E rough-in 50% done',
+        claimedProgress: 68,
+        date: DateTime(2025, 12, 20),
+        source: _sourceMOF,
+      ),
+      OfficialMilestone(
+        description: 'Foundation and basement complete',
+        claimedProgress: 45,
+        date: DateTime(2025, 8, 1),
+        source: _sourceNST,
+      ),
+    ],
+    developerProfile: DeveloperProfile(
+      name: 'PR1MA Corporation',
+      yearsActive: 12,
+      totalProjects: 58,
+      completedProjects: 42,
+      delayedProjects: 8,
+      rating: 4.2,
+      sources: [_sourceMOF, _sourcePropertyGuru],
+      litigationNote: null,
+    ),
+    sentimentAnalysis: SentimentAnalysis(
+      score: 0.85,
+      totalReviews: 47,
+      sources: [_sourcePropertyGuru, _sourceLowyat],
+      summary: 'Mostly positive sentiment. Buyers report good communication from developer.',
+    ),
   ),
   Project(
     id: 'p2',
@@ -39,19 +165,56 @@ final List<Project> mockProjects = [
     description:
         'A low-cost housing project promising 300 terrace houses for B40 families. '
         'Construction halted at foundation stage. Site appears abandoned with overgrown vegetation.',
-    imageUrl: 'assets/images/Taman_Melati.jpg',
+    // Location-based marketing image for Shah Alam
+    imageUrl: _getMarketingImg('Shah Alam, Selangor', 'p2'),
     expectedCompletion: DateTime(2025, 12, 1),
     agencyOrDeveloper: 'Syarikat Bina Megah Sdn Bhd',
     lastActivity: DateTime(2025, 8, 15),
     lastVerified: DateTime(2026, 2, 15),
     checkIns: [
-      CheckIn(id: 'c2a', projectId: 'p2', status: ProjectStatus.stalled, note: 'No workers, no machinery. Site locked. Grass overgrown.', timestamp: DateTime(2026, 2, 15), reporterName: 'Lee W.'),
-      CheckIn(id: 'c2b', projectId: 'p2', status: ProjectStatus.stalled, note: 'Same as last month. Completely abandoned look.', timestamp: DateTime(2026, 1, 20), reporterName: 'Farah Z.'),
-      CheckIn(id: 'c2c', projectId: 'p2', status: ProjectStatus.slowing, note: 'Only 2 workers seen. Very little progress.', timestamp: DateTime(2025, 10, 5), reporterName: 'Ahmad R.'),
+      // Check-ins show Shah Alam stalled/abandoned site images
+      CheckIn(id: 'CHK-P2-2026-0215', projectId: 'p2', status: ProjectStatus.stalled, note: 'No workers, no machinery. Site locked. Grass overgrown.', timestamp: DateTime(2026, 2, 15), reporterName: 'Lee W.', photoUrl: _getStalledImg('Shah Alam, Selangor', 'CHK-P2-2026-0215')),
+      CheckIn(id: 'CHK-P2-2026-0120', projectId: 'p2', status: ProjectStatus.stalled, note: 'Same as last month. Completely abandoned look.', timestamp: DateTime(2026, 1, 20), reporterName: 'Farah Z.', photoUrl: _getStalledImg('Shah Alam, Selangor', 'CHK-P2-2026-0120')),
+      CheckIn(id: 'CHK-P2-2025-1005', projectId: 'p2', status: ProjectStatus.slowing, note: 'Only 2 workers seen. Very little progress.', timestamp: DateTime(2025, 10, 5), reporterName: 'Ahmad R.', photoUrl: _getStalledImg('Shah Alam, Selangor', 'CHK-P2-2025-1005')),
     ],
     latitude: 3.0733,
     longitude: 101.5185,
     isPublic: false,
+    progressPercentage: 12,
+    riskLevel: RiskLevel.high,
+    developerScore: 1.8,
+    sentimentScore: -0.72,
+    scrapedSources: [_sourceBinaMegah, _sourceEdgeProp, _sourceSSM],
+    officialMilestones: [
+      OfficialMilestone(
+        description: 'Foundation work "85% complete"',
+        claimedProgress: 85,
+        date: DateTime(2025, 6, 1),
+        source: _sourceBinaMegah,
+      ),
+      OfficialMilestone(
+        description: 'Earthwork and piling done',
+        claimedProgress: 40,
+        date: DateTime(2025, 3, 15),
+        source: _sourceBinaMegah,
+      ),
+    ],
+    developerProfile: DeveloperProfile(
+      name: 'Syarikat Bina Megah Sdn Bhd',
+      yearsActive: 8,
+      totalProjects: 12,
+      completedProjects: 5,
+      delayedProjects: 6,
+      rating: 1.8,
+      sources: [_sourceSSM, _sourceEdgeProp],
+      litigationNote: 'Class action lawsuit filed by 127 buyers (Nov 2025)',
+    ),
+    sentimentAnalysis: SentimentAnalysis(
+      score: -0.72,
+      totalReviews: 89,
+      sources: [_sourceEdgeProp, _sourceLowyat],
+      summary: 'Highly negative sentiment. Buyers report no response from developer. Legal action pending.',
+    ),
   ),
   Project(
     id: 'p3',
@@ -63,19 +226,25 @@ final List<Project> mockProjects = [
     description:
         'A mid-range condominium with 600 units across two 40-storey towers. '
         'Progress has slowed considerably with only intermittent work observed over the past 3 months.',
-    imageUrl: 'assets/images/Vista_Kota.jpg',
+    // Location-based marketing image for Kuala Lumpur
+    imageUrl: _getMarketingImg('Kuala Lumpur', 'p3'),
     expectedCompletion: DateTime(2027, 3, 1),
     agencyOrDeveloper: 'Mega Development Group',
     developerWebsite: 'https://www.megadevelopment.com.my',
     lastActivity: DateTime(2026, 2, 5),
     lastVerified: DateTime(2026, 2, 12),
     checkIns: [
-      CheckIn(id: 'c3a', projectId: 'p3', status: ProjectStatus.slowing, note: 'Some workers present but barely any visible progress this week.', timestamp: DateTime(2026, 2, 12), reporterName: 'Nabilah S.'),
-      CheckIn(id: 'c3b', projectId: 'p3', status: ProjectStatus.active, note: 'Concrete work resumed after CNY break.', timestamp: DateTime(2026, 1, 30), reporterName: 'James T.'),
+      CheckIn(id: 'c3a', projectId: 'p3', status: ProjectStatus.slowing, note: 'Some workers present but barely any visible progress this week.', timestamp: DateTime(2026, 2, 12), reporterName: 'Nabilah S.', photoUrl: _getConstructionImg('Kuala Lumpur', 'c3a')),
+      CheckIn(id: 'c3b', projectId: 'p3', status: ProjectStatus.active, note: 'Concrete work resumed after CNY break.', timestamp: DateTime(2026, 1, 30), reporterName: 'James T.', photoUrl: _getConstructionImg('Kuala Lumpur', 'c3b')),
     ],
     latitude: 3.1390,
     longitude: 101.6869,
     isPublic: false,
+    // Comparison data - MEDIUM RISK: Developer claims 65%, community verifies 38%
+    progressPercentage: 38,
+    riskLevel: RiskLevel.medium,
+    developerScore: 2.9,
+    sentimentScore: 0.15,
   ),
   Project(
     id: 'p4',
@@ -87,20 +256,26 @@ final List<Project> mockProjects = [
     description:
         'Government-funded apartment complex with 800 units for civil servants. '
         'Construction on track, currently finishing interior works on lower floors.',
-    imageUrl: 'assets/images/Katsuri.jpg',
+    // Location-based marketing image for Johor Bahru
+    imageUrl: _getMarketingImg('Johor Bahru, Johor', 'p4'),
     expectedCompletion: DateTime(2026, 9, 30),
     agencyOrDeveloper: 'SPNB (Syarikat Perumahan Negara)',
     developerWebsite: 'https://www.spnb.com.my',
     lastActivity: DateTime(2026, 2, 21),
     lastVerified: DateTime(2026, 2, 21),
     checkIns: [
-      CheckIn(id: 'c4a', projectId: 'p4', status: ProjectStatus.active, note: 'Tiling work on floors 1-5, painting on ground floor.', timestamp: DateTime(2026, 2, 21), reporterName: 'Haris M.'),
-      CheckIn(id: 'c4b', projectId: 'p4', status: ProjectStatus.active, note: 'Electrical wiring being installed. Steady progress.', timestamp: DateTime(2026, 2, 14), reporterName: 'Azman B.'),
-      CheckIn(id: 'c4c', projectId: 'p4', status: ProjectStatus.active, note: 'Lift installation started this week.', timestamp: DateTime(2026, 2, 7), reporterName: 'Priya D.'),
+      CheckIn(id: 'c4a', projectId: 'p4', status: ProjectStatus.active, note: 'Tiling work on floors 1-5, painting on ground floor.', timestamp: DateTime(2026, 2, 21), reporterName: 'Haris M.', photoUrl: _getConstructionImg('Johor Bahru, Johor', 'c4a')),
+      CheckIn(id: 'c4b', projectId: 'p4', status: ProjectStatus.active, note: 'Electrical wiring being installed. Steady progress.', timestamp: DateTime(2026, 2, 14), reporterName: 'Azman B.', photoUrl: _getConstructionImg('Johor Bahru, Johor', 'c4b')),
+      CheckIn(id: 'c4c', projectId: 'p4', status: ProjectStatus.active, note: 'Lift installation started this week.', timestamp: DateTime(2026, 2, 7), reporterName: 'Priya D.', photoUrl: _getConstructionImg('Johor Bahru, Johor', 'c4c')),
     ],
     latitude: 1.4927,
     longitude: 103.7414,
     isPublic: false,
+    // Comparison data - LOW RISK: Developer claims 88%, community verifies 91%
+    progressPercentage: 91,
+    riskLevel: RiskLevel.low,
+    developerScore: 4.5,
+    sentimentScore: 0.92,
   ),
   Project(
     id: 'p5',
@@ -112,14 +287,14 @@ final List<Project> mockProjects = [
     description:
         'Mixed-use development featuring serviced apartments and retail lots. '
         'No recent community reports available.',
-    imageUrl: 'assets/images/residence_cyberjaya.jpg',
+    imageUrl: _getMarketingImg('Cyberjaya, Selangor', 'p5'),
     expectedCompletion: DateTime(2028, 1, 1),
     agencyOrDeveloper: 'Setia Haruman Sdn Bhd',
     developerWebsite: 'https://www.setiaharuman.com',
     lastActivity: DateTime(2025, 11, 1),
     lastVerified: DateTime(2025, 11, 1),
     checkIns: [
-      CheckIn(id: 'c5a', projectId: 'p5', status: ProjectStatus.active, note: 'Piling work in progress. Early stage.', timestamp: DateTime(2025, 11, 1), reporterName: 'Unknown'),
+      CheckIn(id: 'c5a', projectId: 'p5', status: ProjectStatus.active, note: 'Piling work in progress. Early stage.', timestamp: DateTime(2025, 11, 1), reporterName: 'Unknown', photoUrl: _getConstructionImg('Cyberjaya, Selangor', 'c5a')),
     ],
     latitude: 2.9213,
     longitude: 101.6559,
@@ -137,14 +312,14 @@ final List<Project> mockProjects = [
     description:
         'Road widening project adding 2 lanes to the existing Jalan Damansara corridor to ease congestion. '
         'Includes new drainage, sidewalks, and traffic light upgrades.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Damansara, Kuala Lumpur', 'p6'),
     expectedCompletion: DateTime(2026, 12, 1),
     agencyOrDeveloper: 'JKR (Jabatan Kerja Raya)',
     lastActivity: DateTime(2026, 2, 22),
     lastVerified: DateTime(2026, 2, 22),
     checkIns: [
-      CheckIn(id: 'c6a', projectId: 'p6', status: ProjectStatus.active, note: 'Lane closure in effect. Heavy machinery working on east section.', timestamp: DateTime(2026, 2, 22), reporterName: 'Kamal A.'),
-      CheckIn(id: 'c6b', projectId: 'p6', status: ProjectStatus.active, note: 'New curb being laid along 500m stretch.', timestamp: DateTime(2026, 2, 15), reporterName: 'Mei L.'),
+      CheckIn(id: 'c6a', projectId: 'p6', status: ProjectStatus.active, note: 'Lane closure in effect. Heavy machinery working on east section.', timestamp: DateTime(2026, 2, 22), reporterName: 'Kamal A.', photoUrl: _getConstructionImg('Damansara, Kuala Lumpur', 'c6a')),
+      CheckIn(id: 'c6b', projectId: 'p6', status: ProjectStatus.active, note: 'New curb being laid along 500m stretch.', timestamp: DateTime(2026, 2, 15), reporterName: 'Mei L.', photoUrl: _getConstructionImg('Damansara, Kuala Lumpur', 'c6b')),
     ],
     latitude: 3.1350,
     longitude: 101.6250,
@@ -160,14 +335,14 @@ final List<Project> mockProjects = [
     description:
         'Extension of the East Coast Expressway connecting Kuantan to Kuala Terengganu. '
         'Some sections experiencing delays due to land acquisition issues.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Kuantan, Pahang', 'p7'),
     expectedCompletion: DateTime(2028, 6, 1),
     agencyOrDeveloper: 'ANIH Berhad',
     lastActivity: DateTime(2026, 1, 28),
     lastVerified: DateTime(2026, 2, 10),
     checkIns: [
-      CheckIn(id: 'c7a', projectId: 'p7', status: ProjectStatus.slowing, note: 'Work on KM 45-50 section paused. Land dispute with orang asli settlement.', timestamp: DateTime(2026, 2, 10), reporterName: 'Zul I.'),
-      CheckIn(id: 'c7b', projectId: 'p7', status: ProjectStatus.active, note: 'Bridge construction at Sungai Lembing crossing progressing well.', timestamp: DateTime(2026, 1, 20), reporterName: 'Hassan O.'),
+      CheckIn(id: 'c7a', projectId: 'p7', status: ProjectStatus.slowing, note: 'Work on KM 45-50 section paused. Land dispute with orang asli settlement.', timestamp: DateTime(2026, 2, 10), reporterName: 'Zul I.', photoUrl: _getConstructionImg('Kuantan, Pahang', 'c7a')),
+      CheckIn(id: 'c7b', projectId: 'p7', status: ProjectStatus.active, note: 'Bridge construction at Sungai Lembing crossing progressing well.', timestamp: DateTime(2026, 1, 20), reporterName: 'Hassan O.', photoUrl: _getConstructionImg('Kuantan, Pahang', 'c7b')),
     ],
     latitude: 3.8077,
     longitude: 103.3260,
@@ -183,15 +358,15 @@ final List<Project> mockProjects = [
     description:
         'Safety upgrade project including slope stabilisation, guardrail replacement, '
         'and road resurfacing along the winding route to Genting Highlands.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Genting Highlands, Pahang', 'p8'),
     expectedCompletion: DateTime(2026, 8, 1),
     agencyOrDeveloper: 'JKR (Jabatan Kerja Raya)',
     lastActivity: DateTime(2026, 2, 19),
     lastVerified: DateTime(2026, 2, 19),
     checkIns: [
-      CheckIn(id: 'c8a', projectId: 'p8', status: ProjectStatus.active, note: 'Guardrails installed along hairpin bends at KM 12-15.', timestamp: DateTime(2026, 2, 19), reporterName: 'Ravi S.'),
-      CheckIn(id: 'c8b', projectId: 'p8', status: ProjectStatus.active, note: 'Slope netting completed on dangerous cliff section.', timestamp: DateTime(2026, 2, 8), reporterName: 'Anis F.'),
-      CheckIn(id: 'c8c', projectId: 'p8', status: ProjectStatus.active, note: 'Road resurfacing in progress. One lane closed.', timestamp: DateTime(2026, 1, 25), reporterName: 'Kelvin C.'),
+      CheckIn(id: 'c8a', projectId: 'p8', status: ProjectStatus.active, note: 'Guardrails installed along hairpin bends at KM 12-15.', timestamp: DateTime(2026, 2, 19), reporterName: 'Ravi S.', photoUrl: _getConstructionImg('Genting Highlands, Pahang', 'c8a')),
+      CheckIn(id: 'c8b', projectId: 'p8', status: ProjectStatus.active, note: 'Slope netting completed on dangerous cliff section.', timestamp: DateTime(2026, 2, 8), reporterName: 'Anis F.', photoUrl: _getConstructionImg('Genting Highlands, Pahang', 'c8b')),
+      CheckIn(id: 'c8c', projectId: 'p8', status: ProjectStatus.active, note: 'Road resurfacing in progress. One lane closed.', timestamp: DateTime(2026, 1, 25), reporterName: 'Kelvin C.', photoUrl: _getConstructionImg('Genting Highlands, Pahang', 'c8c')),
     ],
     latitude: 3.4236,
     longitude: 101.7932,
@@ -207,13 +382,13 @@ final List<Project> mockProjects = [
     description:
         'New 2km access road to connect residential areas to the Federal Highway. '
         'Project stalled due to funding cuts.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Subang Jaya, Selangor', 'p9'),
     expectedCompletion: DateTime(2026, 3, 1),
     agencyOrDeveloper: 'MBSJ (Majlis Bandaraya Subang Jaya)',
     lastActivity: DateTime(2025, 9, 10),
     lastVerified: DateTime(2026, 2, 8),
     checkIns: [
-      CheckIn(id: 'c9a', projectId: 'p9', status: ProjectStatus.stalled, note: 'No activity. Machinery removed from site.', timestamp: DateTime(2026, 2, 8), reporterName: 'Izzat N.'),
+      CheckIn(id: 'c9a', projectId: 'p9', status: ProjectStatus.stalled, note: 'No activity. Machinery removed from site.', timestamp: DateTime(2026, 2, 8), reporterName: 'Izzat N.', photoUrl: _getStalledImg('Subang Jaya, Selangor', 'c9a')),
       CheckIn(id: 'c9b', projectId: 'p9', status: ProjectStatus.stalled, note: 'Still no progress. Barricades rusting.', timestamp: DateTime(2026, 1, 5), reporterName: 'Sarah L.'),
     ],
     latitude: 3.0565,
@@ -232,7 +407,7 @@ final List<Project> mockProjects = [
     description:
         'Major flood mitigation project involving river deepening, retention ponds, '
         'and upgraded pump stations along Sungai Klang.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Klang, Selangor', 'p10'),
     expectedCompletion: DateTime(2027, 12, 1),
     agencyOrDeveloper: 'DID (Jabatan Pengairan dan Saliran)',
     lastActivity: DateTime(2026, 2, 20),
@@ -255,7 +430,7 @@ final List<Project> mockProjects = [
     description:
         'Upgrade of drainage infrastructure in flood-prone Taman Sri Muda area. '
         'Includes larger culverts and a new detention pond.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Shah Alam, Selangor', 'p11'),
     expectedCompletion: DateTime(2026, 6, 1),
     agencyOrDeveloper: 'MBSA (Majlis Bandaraya Shah Alam)',
     lastActivity: DateTime(2026, 1, 30),
@@ -278,7 +453,7 @@ final List<Project> mockProjects = [
     description:
         'Construction of a new covered monsoon drain to replace aging open drains '
         'in the Kampung Baru area. Stalled due to utility relocation delays.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Kuala Lumpur', 'p12'),
     expectedCompletion: DateTime(2026, 4, 1),
     agencyOrDeveloper: 'DBKL (Dewan Bandaraya Kuala Lumpur)',
     lastActivity: DateTime(2025, 12, 15),
@@ -301,7 +476,7 @@ final List<Project> mockProjects = [
     description:
         'New industrial drainage system to prevent chemical runoff into nearby waterways. '
         'Critical environmental infrastructure project.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Pasir Gudang, Johor', 'p13'),
     expectedCompletion: DateTime(2026, 11, 1),
     agencyOrDeveloper: 'DOE / JKR Johor',
     lastActivity: DateTime(2026, 2, 18),
@@ -326,7 +501,7 @@ final List<Project> mockProjects = [
     description:
         'Expansion of existing primary school including a new 3-storey classroom block, '
         'canteen upgrade, and covered sports court.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Skudai, Johor', 'p14'),
     expectedCompletion: DateTime(2026, 7, 1),
     agencyOrDeveloper: 'KPM (Kementerian Pendidikan Malaysia)',
     lastActivity: DateTime(2026, 2, 20),
@@ -349,7 +524,7 @@ final List<Project> mockProjects = [
     description:
         'New secondary school campus to serve the growing Presint 16 population. '
         'Construction stopped at ground floor due to contractor financial issues.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Putrajaya', 'p15'),
     expectedCompletion: DateTime(2026, 1, 1),
     agencyOrDeveloper: 'KPM / Perbadanan Putrajaya',
     lastActivity: DateTime(2025, 7, 20),
@@ -373,7 +548,7 @@ final List<Project> mockProjects = [
     description:
         'Renovation and modernisation of existing Chinese-medium primary school. '
         'Includes new science lab, ICT room, and accessibility ramps.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Kepong, Kuala Lumpur', 'p16'),
     expectedCompletion: DateTime(2026, 5, 1),
     agencyOrDeveloper: 'KPM / DBKL',
     lastActivity: DateTime(2026, 2, 17),
@@ -398,7 +573,7 @@ final List<Project> mockProjects = [
     description:
         'Mid-rise apartment project with 200 units across 5 blocks. '
         'Targeted at young professionals and first-time home buyers.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Ipoh, Perak', 'p17'),
     expectedCompletion: DateTime(2027, 1, 1),
     agencyOrDeveloper: 'Perak State Development Corp',
     lastActivity: DateTime(2026, 2, 15),
@@ -421,7 +596,7 @@ final List<Project> mockProjects = [
     description:
         'Gated villa community with 50 luxury units. Progress has slowed '
         'with intermittent work and supply chain issues reported.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Skudai, Johor', 'p18'),
     expectedCompletion: DateTime(2027, 6, 1),
     agencyOrDeveloper: 'Golden Land Properties',
     lastActivity: DateTime(2026, 1, 10),
@@ -443,7 +618,7 @@ final List<Project> mockProjects = [
     description:
         'Replacement public housing project for displaced PPR Kerinchi residents. '
         '4 blocks of 17 storeys each with modern facilities.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Bangsar South, Kuala Lumpur', 'p19'),
     expectedCompletion: DateTime(2026, 12, 1),
     agencyOrDeveloper: 'DBKL / Federal Government',
     lastActivity: DateTime(2026, 2, 21),
@@ -469,7 +644,7 @@ final List<Project> mockProjects = [
     description:
         'New 8km elevated expressway linking Putrajaya Sentral to Cyberjaya. '
         'Includes 3 interchanges and dedicated bus lanes.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Putrajaya–Cyberjaya', 'p20'),
     expectedCompletion: DateTime(2028, 3, 1),
     agencyOrDeveloper: 'MoW (Ministry of Works)',
     lastActivity: DateTime(2026, 2, 18),
@@ -492,7 +667,7 @@ final List<Project> mockProjects = [
     description:
         'Phase 2 of the Jalan Ipoh road resurfacing project. '
         'Work stopped after the monsoon season and has not resumed.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Sentul, Kuala Lumpur', 'p21'),
     expectedCompletion: DateTime(2026, 2, 1),
     agencyOrDeveloper: 'DBKL',
     lastActivity: DateTime(2025, 11, 30),
@@ -516,7 +691,7 @@ final List<Project> mockProjects = [
     location: 'Georgetown, Penang',
     description:
         'Construction of a 2km coastal flood wall to protect heritage areas from rising tides and storm surges.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Georgetown, Penang', 'p22'),
     expectedCompletion: DateTime(2027, 8, 1),
     agencyOrDeveloper: 'DID Penang / Federal Govt',
     lastActivity: DateTime(2026, 2, 19),
@@ -539,7 +714,7 @@ final List<Project> mockProjects = [
     description:
         'Comprehensive rehabilitation of Sungai Pinang including river cleaning, '
         'bank strengthening, and stormwater detention basins.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Penang', 'p23'),
     expectedCompletion: DateTime(2027, 5, 1),
     agencyOrDeveloper: 'Penang State Government',
     lastActivity: DateTime(2026, 1, 25),
@@ -563,7 +738,7 @@ final List<Project> mockProjects = [
     description:
         'New academic wing for MRSM Langkawi with 12 classrooms, '
         '2 science labs, and a multimedia centre.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Langkawi, Kedah', 'p24'),
     expectedCompletion: DateTime(2026, 8, 1),
     agencyOrDeveloper: 'MARA / KPM',
     lastActivity: DateTime(2026, 2, 17),
@@ -586,7 +761,7 @@ final List<Project> mockProjects = [
     description:
         'New KEMAS kindergarten building to replace a temporary structure. '
         'Project announced but no recent verification.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Taman Melawati, KL', 'p25'),
     expectedCompletion: DateTime(2026, 12, 1),
     agencyOrDeveloper: 'KEMAS',
     lastActivity: DateTime(2025, 10, 1),
@@ -610,7 +785,7 @@ final List<Project> mockProjects = [
     description:
         'Pedestrianisation and heritage restoration of Jonker Street area sidewalks '
         'and access roads. Includes cobblestone paving and heritage lighting.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Malacca City, Malacca', 'p26'),
     expectedCompletion: DateTime(2026, 10, 1),
     agencyOrDeveloper: 'MBMB (Majlis Bandaraya Melaka Bersejarah)',
     lastActivity: DateTime(2026, 2, 22),
@@ -633,7 +808,7 @@ final List<Project> mockProjects = [
     description:
         'Upgrade of stormwater drainage along the KK waterfront to prevent '
         'flooding during heavy monsoon rains.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Kota Kinabalu, Sabah', 'p27'),
     expectedCompletion: DateTime(2027, 4, 1),
     agencyOrDeveloper: 'JKR Sabah',
     lastActivity: DateTime(2025, 12, 1),
@@ -655,7 +830,7 @@ final List<Project> mockProjects = [
     description:
         'Phase 5 of the Eco Grandeur township featuring 120 double-storey terrace houses '
         'with smart home features and solar panels.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Puncak Alam, Selangor', 'p28'),
     expectedCompletion: DateTime(2026, 11, 1),
     agencyOrDeveloper: 'EcoWorld Development',
     developerWebsite: 'https://ecoworld.my',
@@ -680,7 +855,7 @@ final List<Project> mockProjects = [
     description:
         'Additional classroom block for the overcrowded SK Bukit Jalil 2. '
         'Progress slower than expected due to material cost increases.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Bukit Jalil, Kuala Lumpur', 'p29'),
     expectedCompletion: DateTime(2026, 7, 1),
     agencyOrDeveloper: 'KPM',
     lastActivity: DateTime(2026, 2, 10),
@@ -703,7 +878,7 @@ final List<Project> mockProjects = [
     description:
         'Covered pedestrian bridge connecting Sunway Pyramid to Sunway University '
         'across the Federal Highway. Includes elevator access.',
-    imageUrl: '',
+    imageUrl: _getMarketingImg('Sunway, Selangor', 'p30'),
     expectedCompletion: DateTime(2026, 6, 1),
     agencyOrDeveloper: 'Sunway Group / MBSJ',
     lastActivity: DateTime(2026, 2, 22),
