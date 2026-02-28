@@ -1,0 +1,14 @@
+﻿  Feature-Maps-UI                5c22374 [origin/Feature-Maps-UI] addded comparison feature and pdf analysis report feature
+  Test-add-ons                   f988885 [origin/Test-add-ons] Initial commit: ProjekWatch Flutter app
+  Vince1                         b1706c4 [origin/Vince1: behind 2] Map Api
+  hansen1                        0a3249f [origin/hansen1] Merge pull request #3 from yapzhanquan/Vince1
+  main                           f988885 [origin/main: behind 3] Initial commit: ProjekWatch Flutter app
+  vince1-merge-backup            0a3249f Merge pull request #3 from yapzhanquan/Vince1
+  zq1                            b1706c4 [origin/zq1] Map Api
+  remotes/origin/Feature-Maps-UI 5c22374 addded comparison feature and pdf analysis report feature
+  remotes/origin/HEAD            -> origin/main
+  remotes/origin/Test-add-ons    f988885 Initial commit: ProjekWatch Flutter app
+  remotes/origin/hansen1         0a3249f Merge pull request #3 from yapzhanquan/Vince1
+  remotes/origin/main            55930c1 Add Director & Company Network Map investigative feature
+  remotes/origin/vince1          6f9b9f4 Merge main into vince1: Add Director & Company Network Map feature
+  remotes/origin/zq1             b1706c4 Map Api

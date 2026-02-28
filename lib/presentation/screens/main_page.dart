@@ -13,6 +13,7 @@ import '../widgets/project_card.dart';
 import '../widgets/compare_bar.dart';
 import 'project_detail_page.dart';
 import 'add_checkin_page.dart';
+import 'login_page.dart';
 
 /// Premium Airbnb-style Main Page
 /// Features:
@@ -248,7 +249,14 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   }
 
   Widget _buildProfileAvatar() {
-    return Container(
+  return GestureDetector(
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    },
+    child: Container(
       width: 36,
       height: 36,
       decoration: BoxDecoration(
@@ -261,8 +269,9 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
         size: 20,
         color: AppColors.textSecondary,
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _TabInfo {

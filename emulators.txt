@@ -1,0 +1,14 @@
+﻿3 available emulators:
+
+Id                    ΓÇó Name                  ΓÇó Manufacturer ΓÇó Platform
+
+Medium_Phone          ΓÇó Medium Phone          ΓÇó Generic      ΓÇó android
+Medium_Phone_API_36.1 ΓÇó Medium Phone API 36.1 ΓÇó Generic      ΓÇó android
+flutter_emulator      ΓÇó flutter emulator      ΓÇó Google       ΓÇó android
+
+To run an emulator, run 'flutter emulators --launch <emulator id>'.
+To create a new emulator, run 'flutter emulators --create [--name xyz]'.
+
+You can find more information on managing emulators at the links below:
+  https://developer.android.com/studio/run/managing-avds
+  https://developer.android.com/studio/command-line/avdmanager
