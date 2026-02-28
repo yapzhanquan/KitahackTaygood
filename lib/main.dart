@@ -1,80 +1,56 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/app_colors.dart';
+import 'core/constants/app_strings.dart';
 import 'providers/project_provider.dart';
-import 'screens/main_page.dart';
+import 'providers/report_provider.dart';
+import 'providers/compare_provider.dart';
+import 'presentation/screens/main_page.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set system UI styling
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+      systemNavigationBarColor: AppColors.surface,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+  
   runApp(const ProjekWatchApp());
 }
 
+/// ProjekWatch - Community Project Tracking Application
+/// 
+/// Architecture: Clean Architecture Lite
+/// - presentation/ : UI components, screens, widgets
+/// - domain/ : Business logic, services
+/// - core/ : Theme, constants, utilities
+/// - providers/ : State management (Provider)
+/// - models/ : Data models
 class ProjekWatchApp extends StatelessWidget {
   const ProjekWatchApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ProjectProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ProjectProvider()),
+        ChangeNotifierProvider(create: (_) => ReportProvider()),
+        ChangeNotifierProvider(create: (_) => CompareProvider()),
+      ],
       child: MaterialApp(
-        title: 'ProjekWatch',
+        title: AppStrings.appName,
         debugShowCheckedModeBanner: false,
-        debugShowMaterialGrid: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          brightness: Brightness.light,
-          scaffoldBackgroundColor: const Color(0xFFFAFAFA),
-          textTheme: GoogleFonts.interTextTheme(
-            ThemeData.light().textTheme,
-          ),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color.fromARGB(255, 57, 57, 71),
-            brightness: Brightness.light,
-            surface: const Color(0xFFFAFAFA),
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            foregroundColor: Color(0xFF1A1A2E),
-            elevation: 0,
-            scrolledUnderElevation: 1,
-          ),
-          cardTheme: CardThemeData(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            color: Colors.white,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1A1A2E),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFF1A1A2E), width: 1.5),
-            ),
-          ),
-        ),
+        theme: AppTheme.light,
         home: const MainPage(),
       ),
     );
   }
 }
-
