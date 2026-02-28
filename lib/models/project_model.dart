@@ -1,4 +1,5 @@
 import 'checkin_model.dart';
+import 'developer_enrichment_model.dart';
 
 enum ProjectCategory { housing, road, drainage, school }
 
@@ -66,6 +67,8 @@ class Project {
   final double latitude;
   final double longitude;
   final bool isPublic;
+  final String? developerWebsite;
+  DeveloperEnrichment? developerEnrichment;
 
   Project({
     required this.id,
@@ -84,5 +87,67 @@ class Project {
     required this.latitude,
     required this.longitude,
     required this.isPublic,
+    this.developerWebsite,
+    this.developerEnrichment,
   });
+
+  // ── Firestore serialization ─────────────────────────────────
+
+  factory Project.fromJson(Map<String, dynamic> json, {String? docId}) {
+    return Project(
+      id: docId ?? json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      category: ProjectCategory.values.firstWhere(
+        (e) => e.name == json['category'],
+        orElse: () => ProjectCategory.housing,
+      ),
+      status: ProjectStatus.values.firstWhere(
+        (e) => e.name == json['status'],
+        orElse: () => ProjectStatus.unverified,
+      ),
+      confidence: ConfidenceLevel.values.firstWhere(
+        (e) => e.name == json['confidence'],
+        orElse: () => ConfidenceLevel.low,
+      ),
+      location: json['location'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      imageUrl: json['imageUrl'] as String? ?? '',
+      expectedCompletion: json['expectedCompletion'] != null
+          ? DateTime.tryParse(json['expectedCompletion'] as String)
+          : null,
+      agencyOrDeveloper: json['agencyOrDeveloper'] as String? ?? '',
+      lastActivity: DateTime.tryParse(json['lastActivity'] as String? ?? '') ??
+          DateTime.now(),
+      lastVerified: DateTime.tryParse(json['lastVerified'] as String? ?? '') ??
+          DateTime.now(),
+      checkIns: [], // Check-ins loaded separately as a sub-collection
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+      isPublic: json['isPublic'] as bool? ?? true,
+      developerWebsite: json['developerWebsite'] as String?,
+      developerEnrichment: json['developerEnrichment'] != null
+          ? DeveloperEnrichment.fromJson(
+              json['developerEnrichment'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'category': category.name,
+        'status': status.name,
+        'confidence': confidence.name,
+        'location': location,
+        'description': description,
+        'imageUrl': imageUrl,
+        'expectedCompletion': expectedCompletion?.toIso8601String(),
+        'agencyOrDeveloper': agencyOrDeveloper,
+        'lastActivity': lastActivity.toIso8601String(),
+        'lastVerified': lastVerified.toIso8601String(),
+        'latitude': latitude,
+        'longitude': longitude,
+        'isPublic': isPublic,
+        'developerWebsite': developerWebsite,
+        'developerEnrichment': developerEnrichment?.toJson(),
+      };
 }

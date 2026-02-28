@@ -14,9 +14,10 @@ final List<Project> mockProjects = [
         'A 30-storey affordable housing project under RUMAWIP, featuring 450 units ranging from 800–1000 sq ft. '
         'Amenities include a swimming pool, gymnasium, surau, and playground. '
         'Currently in structural phase with columns rising on floors 18–22.',
-    imageUrl: '',
+    imageUrl: 'assets/images/Harmoni_phase_2.jpg',
     expectedCompletion: DateTime(2027, 6, 15),
     agencyOrDeveloper: 'PR1MA Corporation',
+    developerWebsite: 'https://www.pr1ma.my',
     lastActivity: DateTime(2026, 2, 20),
     lastVerified: DateTime(2026, 2, 18),
     checkIns: [
@@ -38,7 +39,7 @@ final List<Project> mockProjects = [
     description:
         'A low-cost housing project promising 300 terrace houses for B40 families. '
         'Construction halted at foundation stage. Site appears abandoned with overgrown vegetation.',
-    imageUrl: '',
+    imageUrl: 'assets/images/Taman_Melati.jpg',
     expectedCompletion: DateTime(2025, 12, 1),
     agencyOrDeveloper: 'Syarikat Bina Megah Sdn Bhd',
     lastActivity: DateTime(2025, 8, 15),
@@ -62,9 +63,10 @@ final List<Project> mockProjects = [
     description:
         'A mid-range condominium with 600 units across two 40-storey towers. '
         'Progress has slowed considerably with only intermittent work observed over the past 3 months.',
-    imageUrl: '',
+    imageUrl: 'assets/images/Vista_Kota.jpg',
     expectedCompletion: DateTime(2027, 3, 1),
     agencyOrDeveloper: 'Mega Development Group',
+    developerWebsite: 'https://www.megadevelopment.com.my',
     lastActivity: DateTime(2026, 2, 5),
     lastVerified: DateTime(2026, 2, 12),
     checkIns: [
@@ -85,9 +87,10 @@ final List<Project> mockProjects = [
     description:
         'Government-funded apartment complex with 800 units for civil servants. '
         'Construction on track, currently finishing interior works on lower floors.',
-    imageUrl: '',
+    imageUrl: 'assets/images/Katsuri.jpg',
     expectedCompletion: DateTime(2026, 9, 30),
     agencyOrDeveloper: 'SPNB (Syarikat Perumahan Negara)',
+    developerWebsite: 'https://www.spnb.com.my',
     lastActivity: DateTime(2026, 2, 21),
     lastVerified: DateTime(2026, 2, 21),
     checkIns: [
@@ -109,9 +112,10 @@ final List<Project> mockProjects = [
     description:
         'Mixed-use development featuring serviced apartments and retail lots. '
         'No recent community reports available.',
-    imageUrl: '',
+    imageUrl: 'assets/images/residence_cyberjaya.jpg',
     expectedCompletion: DateTime(2028, 1, 1),
     agencyOrDeveloper: 'Setia Haruman Sdn Bhd',
+    developerWebsite: 'https://www.setiaharuman.com',
     lastActivity: DateTime(2025, 11, 1),
     lastVerified: DateTime(2025, 11, 1),
     checkIns: [
@@ -654,6 +658,7 @@ final List<Project> mockProjects = [
     imageUrl: '',
     expectedCompletion: DateTime(2026, 11, 1),
     agencyOrDeveloper: 'EcoWorld Development',
+    developerWebsite: 'https://ecoworld.my',
     lastActivity: DateTime(2026, 2, 21),
     lastVerified: DateTime(2026, 2, 21),
     checkIns: [
