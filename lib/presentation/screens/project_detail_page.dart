@@ -1,6 +1,7 @@
 import 'dart:ui';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -22,6 +23,7 @@ import '../widgets/property_map.dart';
 import 'add_checkin_page.dart';
 import 'comparison_page.dart';
 import 'developer_profile_page.dart';
+import '../../auth/login_guard.dart';
 
 /// Premium Airbnb-style Project Detail Page
 class ProjectDetailPage extends StatelessWidget {
@@ -34,6 +36,7 @@ class ProjectDetailPage extends StatelessWidget {
     return Consumer<ProjectProvider>(
       builder: (context, provider, _) {
         final project = provider.getProjectById(projectId);
+        final isSaved = provider.isProjectSaved(project.id);
         
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -41,7 +44,11 @@ class ProjectDetailPage extends StatelessWidget {
             children: [
               CustomScrollView(
                 slivers: [
-                  _buildHeroAppBar(context, project),
+                  _buildHeroAppBar(
+                    context,
+                    project,
+                    isSaved: isSaved,
+                  ),
                   SliverToBoxAdapter(
                     child: _buildContent(context, project),
                   ),
@@ -60,7 +67,11 @@ class ProjectDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroAppBar(BuildContext context, Project project) {
+  Widget _buildHeroAppBar(
+    BuildContext context,
+    Project project, {
+    required bool isSaved,
+  }) {
     final color = _getCategoryColor(project.category);
     
     return SliverAppBar(
@@ -74,9 +85,15 @@ class ProjectDetailPage extends StatelessWidget {
         onTap: () => Navigator.pop(context),
       ),
       actions: [
-        _buildCircleButton(icon: Icons.share_outlined, onTap: () {}),
+        _buildCircleButton(
+          icon: Icons.share_outlined,
+          onTap: () => _shareProject(context, project),
+        ),
         const SizedBox(width: AppSpacing.xs),
-        _buildCircleButton(icon: Icons.bookmark_border_rounded, onTap: () {}),
+        _buildCircleButton(
+          icon: isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+          onTap: () => _toggleSavedProject(context, project),
+        ),
         const SizedBox(width: AppSpacing.md),
       ],
       flexibleSpace: FlexibleSpaceBar(
@@ -119,20 +136,6 @@ class ProjectDetailPage extends StatelessWidget {
               child: GlassmorphismStatusBadge(status: project.status),
             ),
             Positioned(
-              bottom: AppSpacing.xl,
-              left: AppSpacing.pagePadding,
-              right: AppSpacing.pagePadding,
-              child: Text(
-                project.name,
-                style: AppTypography.displaySmall.copyWith(
-                  color: AppColors.textPrimary,
-                  shadows: [Shadow(offset: const Offset(0, 1), blurRadius: 2, color: Colors.white.withValues(alpha: 0.5))],
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Positioned(
               bottom: AppSpacing.md, right: AppSpacing.md,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
@@ -159,6 +162,37 @@ class ProjectDetailPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _shareProject(BuildContext context, Project project) async {
+    final shareText = StringBuffer()
+      ..writeln('Project: ${project.name}')
+      ..writeln('Location: ${project.location}')
+      ..writeln('Status: ${project.status.label}')
+      ..writeln('Image: ${project.imageUrl}')
+      ..writeln('Shared via ProjekWatch');
+
+    await Clipboard.setData(ClipboardData(text: shareText.toString()));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Project details copied. Paste to share.'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _toggleSavedProject(BuildContext context, Project project) {
+    final provider = context.read<ProjectProvider>();
+    final wasSaved = provider.isProjectSaved(project.id);
+    provider.toggleSavedProject(project.id);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(wasSaved ? 'Removed from saved projects' : 'Saved project'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -1119,15 +1153,172 @@ class _ReviewsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.pagePadding, vertical: AppSpacing.lg),
+    final checkinsQuery = FirebaseFirestore.instance
+        .collection('checkins')
+        .where('projectId', isEqualTo: project.id)
+        .orderBy('createdAt', descending: true);
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: checkinsQuery.snapshots(),
+      builder: (context, snapshot) {
+        final docs = snapshot.data?.docs ?? const [];
+        return Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.pagePadding,
+            vertical: AppSpacing.lg,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.rate_review_outlined,
+                    size: 24,
+                    color: AppColors.textPrimary,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    '${docs.length} ${AppStrings.communityReports}',
+                    style: AppTypography.headlineMedium,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              if (snapshot.connectionState == ConnectionState.waiting)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (docs.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    'No community reports yet.',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                )
+              else
+                ...docs.map((doc) => _FirestoreCheckinCard(data: doc.data())),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FirestoreCheckinCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const _FirestoreCheckinCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final userName = (data['userName'] as String?)?.trim().isNotEmpty == true
+        ? (data['userName'] as String).trim()
+        : 'Community User';
+    final note = (data['note'] as String?)?.trim() ?? '';
+    final statusLabel = (data['status'] as String?)?.trim() ?? 'Unverified';
+    final createdAtTs = data['createdAt'];
+    final createdAt = createdAtTs is Timestamp ? createdAtTs.toDate() : null;
+    final dateText = createdAt != null
+        ? DateFormat('MMM d, yyyy').format(createdAt)
+        : 'Just now';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(color: AppColors.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [const Icon(Icons.rate_review_outlined, size: 24, color: AppColors.textPrimary), const SizedBox(width: AppSpacing.sm), Text('${project.checkIns.length} ${AppStrings.communityReports}', style: AppTypography.headlineMedium)]),
-          const SizedBox(height: AppSpacing.md),
-          ...project.checkIns.take(3).map((ci) => CheckInReviewCard(checkIn: ci)),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.surfaceVariant,
+                child: Text(
+                  userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                  style: AppTypography.labelLarge,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(userName, style: AppTypography.titleSmall),
+                    Text(dateText, style: AppTypography.captionMedium),
+                  ],
+                ),
+              ),
+              _StatusPill(statusLabel: statusLabel),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            note,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textPrimary,
+              height: 1.5,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final String statusLabel;
+  const _StatusPill({required this.statusLabel});
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = statusLabel.toLowerCase();
+    Color color;
+    switch (normalized) {
+      case 'active':
+        color = AppColors.green600;
+        break;
+      case 'slowing':
+        color = AppColors.amber600;
+        break;
+      case 'stalled':
+        color = AppColors.red600;
+        break;
+      default:
+        color = AppColors.gray600;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+      ),
+      child: Text(
+        statusLabel,
+        style: AppTypography.badge.copyWith(color: color),
       ),
     );
   }
@@ -1664,7 +1855,16 @@ class _StickyBottomBar extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.md),
           ElevatedButton.icon(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AddCheckinPage(projectId: project.id))),
+            onPressed: () async {
+              if (!await requireLogin(context)) return;
+              if (!context.mounted) return;
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AddCheckinPage(projectId: project.id),
+                ),
+              );
+            },
             icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
             label: Text(AppStrings.addCheckin, style: AppTypography.button.copyWith(color: AppColors.textInverse)),
             style: ElevatedButton.styleFrom(

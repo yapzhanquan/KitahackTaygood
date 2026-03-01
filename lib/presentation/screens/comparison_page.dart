@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_colors.dart';
@@ -9,6 +8,7 @@ import '../../core/theme/app_typography.dart';
 import '../../providers/compare_provider.dart';
 import '../../models/project_model.dart';
 import '../widgets/source_link_badge.dart';
+import '../widgets/project_image.dart';
 
 /// Apple-style Project Comparison Page
 /// High-contrast visual indicators with AI-driven conflict insights
@@ -165,11 +165,11 @@ class _ComparisonPageState extends State<ComparisonPage> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(22),
-                  child: CachedNetworkImage(
-                    imageUrl: _getImageUrl(project.category),
+                  child: ProjectImage(
+                    project: project,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: AppColors.slate100),
-                    errorWidget: (_, __, ___) => Container(
+                    placeholder: Container(color: AppColors.slate100),
+                    errorWidget: Container(
                       color: AppColors.slate100,
                       child: const Icon(Icons.image, color: AppColors.slate400),
                     ),
@@ -1700,18 +1700,6 @@ class _ComparisonPageState extends State<ComparisonPage> {
     );
   }
 
-  String _getImageUrl(ProjectCategory category) {
-    switch (category) {
-      case ProjectCategory.housing:
-        return 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=400&fit=crop';
-      case ProjectCategory.road:
-        return 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=400&h=400&fit=crop';
-      case ProjectCategory.drainage:
-        return 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=400&fit=crop';
-      case ProjectCategory.school:
-        return 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400&h=400&fit=crop';
-    }
-  }
 }
 
 /// Animated status dot - pulses for active projects

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../providers/compare_provider.dart';
 import '../../models/project_model.dart';
 import '../screens/comparison_page.dart';
+import 'project_image.dart';
 
 /// Floating Compare Bar - appears when projects are selected for comparison
 /// Inspired by Apple's product comparison UI
@@ -121,11 +121,11 @@ class CompareBar extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd - 2),
-                child: CachedNetworkImage(
-                  imageUrl: _getImageUrl(project.category),
+                child: ProjectImage(
+                  project: project,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(color: AppColors.slate700),
-                  errorWidget: (_, __, ___) => Container(
+                  placeholder: Container(color: AppColors.slate700),
+                  errorWidget: Container(
                     color: AppColors.slate700,
                     child: const Icon(Icons.image, color: AppColors.slate500, size: 20),
                   ),
@@ -240,16 +240,4 @@ class CompareBar extends StatelessWidget {
     );
   }
 
-  String _getImageUrl(ProjectCategory category) {
-    switch (category) {
-      case ProjectCategory.housing:
-        return 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=200&h=200&fit=crop';
-      case ProjectCategory.road:
-        return 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=200&h=200&fit=crop';
-      case ProjectCategory.drainage:
-        return 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=200&h=200&fit=crop';
-      case ProjectCategory.school:
-        return 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=200&h=200&fit=crop';
-    }
-  }
 }

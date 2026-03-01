@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
 import 'core/constants/app_strings.dart';
+import 'auth/auth_gate.dart';
 import 'providers/project_provider.dart';
 import 'providers/report_provider.dart';
 import 'providers/compare_provider.dart';
-import 'presentation/screens/main_page.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  await Firebase.initializeApp();
+
   // Set system UI styling
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -49,7 +51,7 @@ class ProjekWatchApp extends StatelessWidget {
         title: AppStrings.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
-        home: const MainPage(),
+        home: const AuthGate(),
       ),
     );
   }

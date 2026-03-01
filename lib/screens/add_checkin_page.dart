@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/project_provider.dart';
 import '../models/project_model.dart';
 import '../models/checkin_model.dart';
+import '../auth/login_guard.dart';
 
 class AddCheckinPage extends StatefulWidget {
   final String projectId;
@@ -26,7 +27,9 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (!await requireLogin(context)) return;
+    if (!mounted) return;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
@@ -360,7 +363,7 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submit,
+                  onPressed: _isSubmitting ? null : () => _submit(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1A1A2E),
                     foregroundColor: Colors.white,

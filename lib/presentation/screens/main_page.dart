@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -13,6 +14,8 @@ import '../widgets/project_card.dart';
 import '../widgets/compare_bar.dart';
 import 'project_detail_page.dart';
 import 'add_checkin_page.dart';
+import '../../auth/login_guard.dart';
+import '../../auth/auth_service.dart';
 
 /// Premium Airbnb-style Main Page
 /// Features:
@@ -30,6 +33,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   int _selectedTab = 0;
   late AnimationController _slideController;
   late Animation<double> _slideAnimation;
+  bool? _lastIsTablet;
 
   static const _tabs = [
     _TabInfo(icon: Icons.grid_view_rounded, label: 'Projects'),
@@ -50,6 +54,16 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isTablet = MediaQuery.sizeOf(context).width > 600;
+    if (_lastIsTablet != isTablet) {
+      _lastIsTablet = isTablet;
+      context.read<CompareProvider>().setMaxSelection(isTablet);
+    }
+  }
+
+  @override
   void dispose() {
     _slideController.dispose();
     super.dispose();
@@ -65,12 +79,6 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    // Set max selection based on device width (tablet vs mobile)
-    final isTablet = MediaQuery.of(context).size.width > 600;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CompareProvider>().setMaxSelection(isTablet);
-    });
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -222,7 +230,9 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
 
   Widget _buildContributeButton() {
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
+        if (!await requireLogin(context)) return;
+        if (!mounted) return;
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const AddCheckinPage()),
@@ -248,18 +258,93 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   }
 
   Widget _buildProfileAvatar() {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.border),
+    final user = FirebaseAuth.instance.currentUser;
+    final userName = (user?.displayName?.trim().isNotEmpty ?? false)
+        ? user!.displayName!.trim()
+        : 'User';
+    final userEmail = user?.email?.trim().isNotEmpty == true
+        ? user!.email!.trim()
+        : 'No email';
+    final avatarLetter = userName.isNotEmpty
+        ? userName[0].toUpperCase()
+        : 'U';
+
+    return PopupMenuButton<String>(
+      tooltip: 'Profile',
+      onSelected: (value) async {
+        if (value == 'logout') {
+          await AuthService.logout();
+        }
+      },
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
-      child: const Icon(
-        Icons.person_outline_rounded,
-        size: 20,
-        color: AppColors.textSecondary,
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          enabled: false,
+          child: SizedBox(
+            width: 220,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  userName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  userEmail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.captionMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'logout',
+          child: Row(
+            children: [
+              const Icon(
+                Icons.logout_rounded,
+                size: 18,
+                color: AppColors.textPrimary,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'Logout',
+                style: AppTypography.labelLarge.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          avatarLetter,
+          style: AppTypography.labelLarge.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }
@@ -337,6 +422,8 @@ class _HorizontalProjectList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final projectProvider = context.watch<ProjectProvider>();
+
     if (projects.isEmpty) {
       return _buildEmptyState();
     }
@@ -348,14 +435,17 @@ class _HorizontalProjectList extends StatelessWidget {
         padding: const EdgeInsets.only(right: AppSpacing.pagePadding),
         itemCount: projects.length,
         itemBuilder: (context, index) {
+          final project = projects[index];
           return ProjectCard(
-            project: projects[index],
+            project: project,
+            isBookmarked: projectProvider.isProjectSaved(project.id),
+            onBookmarkTap: () => projectProvider.toggleSavedProject(project.id),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => ProjectDetailPage(
-                    projectId: projects[index].id,
+                    projectId: project.id,
                   ),
                 ),
               );

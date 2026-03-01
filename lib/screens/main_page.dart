@@ -6,6 +6,7 @@ import '../widgets/hero_search_bar.dart';
 import '../widgets/section_header.dart';
 import '../widgets/project_card.dart';
 import 'project_detail_page.dart';
+import '../auth/login_guard.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -82,18 +83,29 @@ class _MainPageState extends State<MainPage> {
           ),
           const Spacer(),
           // Contribute button
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A2E),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Contribute',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+          GestureDetector(
+            onTap: () async {
+              if (!await requireLogin(context)) return;
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Open a project to add a check-in.'),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A2E),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Contribute',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

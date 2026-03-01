@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "148842776819",
+    "project_id": "projekwatch-8c345",
+    "storage_bucket": "projekwatch-8c345.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:148842776819:android:4a6f6bf1bb8f8730444f86",
+        "android_client_info": {
+          "package_name": "com.projekwatch.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyg--BpksMXnCTnu1VshasV9Oy8inOKJk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

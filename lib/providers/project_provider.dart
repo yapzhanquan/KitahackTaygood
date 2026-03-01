@@ -5,6 +5,7 @@ import '../mock_data.dart';
 
 class ProjectProvider extends ChangeNotifier {
   List<Project> _projects = [];
+  final Set<String> _savedProjectIds = <String>{};
 
   String _searchQuery = '';
   ProjectCategory? _categoryFilter;
@@ -81,6 +82,21 @@ class ProjectProvider extends ChangeNotifier {
 
   Project getProjectById(String id) =>
       _projects.firstWhere((p) => p.id == id);
+
+  // -- Saved projects --
+
+  bool isProjectSaved(String projectId) => _savedProjectIds.contains(projectId);
+
+  Set<String> get savedProjectIds => Set.unmodifiable(_savedProjectIds);
+
+  void toggleSavedProject(String projectId) {
+    if (_savedProjectIds.contains(projectId)) {
+      _savedProjectIds.remove(projectId);
+    } else {
+      _savedProjectIds.add(projectId);
+    }
+    notifyListeners();
+  }
 
   // ── Check-in management ──
 

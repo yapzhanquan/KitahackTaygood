@@ -7,6 +7,7 @@ import '../models/checkin_model.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/confidence_badge.dart';
 import 'add_checkin_page.dart';
+import '../auth/login_guard.dart';
 
 class ProjectDetailPage extends StatelessWidget {
   final String projectId;
@@ -647,7 +648,9 @@ class ProjectDetailPage extends StatelessWidget {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                if (!await requireLogin(context)) return;
+                if (!context.mounted) return;
                 Navigator.push(
                   context,
                   MaterialPageRoute(

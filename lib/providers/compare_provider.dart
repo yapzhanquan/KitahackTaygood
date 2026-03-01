@@ -26,7 +26,13 @@ class CompareProvider extends ChangeNotifier {
 
   /// Set max selection based on device type
   void setMaxSelection(bool isTablet) {
-    _maxSelection = isTablet ? maxSelectionTablet : maxSelectionMobile;
+    final newMaxSelection = isTablet ? maxSelectionTablet : maxSelectionMobile;
+    if (_maxSelection == newMaxSelection &&
+        _selectedProjects.length <= newMaxSelection) {
+      return;
+    }
+
+    _maxSelection = newMaxSelection;
     // Trim selection if needed
     while (_selectedProjects.length > _maxSelection) {
       _selectedProjects.removeLast();

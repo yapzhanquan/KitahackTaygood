@@ -2,13 +2,13 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../models/project_model.dart';
 import '../../providers/compare_provider.dart';
 import 'status_badge.dart';
+import 'project_image.dart';
 
 /// Premium Airbnb-style Project Card with:
 /// - CachedNetworkImage with realistic Unsplash URLs
@@ -60,8 +60,6 @@ class _ProjectCardState extends State<ProjectCard> {
       case ProjectCategory.school: return Icons.school_rounded;
     }
   }
-
-  String get _imageUrl => widget.project.imageUrl;
 
   double get _scale {
     if (_isPressed) return 0.97;
@@ -131,11 +129,11 @@ class _ProjectCardState extends State<ProjectCard> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          CachedNetworkImage(
-            imageUrl: _imageUrl,
+          ProjectImage(
+            project: widget.project,
             fit: BoxFit.cover,
-            placeholder: (context, url) => _buildImagePlaceholder(),
-            errorWidget: (context, url, error) => _buildErrorPlaceholder(),
+            placeholder: _buildImagePlaceholder(),
+            errorWidget: _buildErrorPlaceholder(),
           ),
           
           // Soft gradient overlay (transparent to Black/40) for text readability
@@ -376,7 +374,7 @@ class _ProjectCardState extends State<ProjectCard> {
           Row(
             children: [
               ConfidenceBadge(confidence: widget.project.confidence, compact: true),
-              const Spacer(),
+              const SizedBox(width: AppSpacing.sm),
               Flexible(
                 child: Text('Verified ${df.format(widget.project.lastVerified)}', style: AppTypography.captionMedium, overflow: TextOverflow.ellipsis),
               ),
@@ -534,3 +532,4 @@ class _ProjectCardCompactState extends State<ProjectCardCompact> {
     );
   }
 }
+
