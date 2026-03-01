@@ -1,18 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+
 import 'config/app_config.dart';
 import 'config/firebase_options.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/app_colors.dart';
+import 'core/constants/app_strings.dart';
 import 'providers/project_provider.dart';
+import 'providers/report_provider.dart';
+import 'providers/compare_provider.dart';
 import 'providers/auth_provider.dart' as app_auth;
-import 'screens/main_page.dart';
+import 'presentation/screens/main_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set system UI styling
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+      systemNavigationBarColor: AppColors.surface,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
 
   final runtimeMode = await _resolveRuntimeDataMode();
   AppConfig.setRuntimeDataMode(runtimeMode);
@@ -62,6 +79,7 @@ Future<DataMode> _resolveRuntimeDataMode() async {
   }
 }
 
+/// ProjekWatch - Community Project Tracking Application
 class ProjekWatchApp extends StatelessWidget {
   final DataMode runtimeMode;
 
@@ -77,66 +95,16 @@ class ProjekWatchApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => app_auth.AuthProvider(dataMode: runtimeMode),
         ),
+        ChangeNotifierProvider(create: (_) => ReportProvider()),
+        ChangeNotifierProvider(create: (_) => CompareProvider()),
       ],
       child: MaterialApp(
-        title: 'ProjekWatch',
+        title: AppStrings.appName,
         debugShowCheckedModeBanner: false,
-        debugShowMaterialGrid: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          brightness: Brightness.light,
-          scaffoldBackgroundColor: const Color(0xFFFAFAFA),
-          textTheme: GoogleFonts.interTextTheme(
-            ThemeData.light().textTheme,
-          ),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color.fromARGB(255, 57, 57, 71),
-            brightness: Brightness.light,
-            surface: const Color(0xFFFAFAFA),
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            foregroundColor: Color(0xFF1A1A2E),
-            elevation: 0,
-            scrolledUnderElevation: 1,
-          ),
-          cardTheme: CardThemeData(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            color: Colors.white,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1A1A2E),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFF1A1A2E), width: 1.5),
-            ),
-          ),
-        ),
+        theme: AppTheme.light,
         home: const MainPage(),
       ),
     );
   }
 }
+

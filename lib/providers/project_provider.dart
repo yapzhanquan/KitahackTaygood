@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/project_model.dart';
 import '../models/checkin_model.dart';
-import '../models/developer_enrichment_model.dart';
+import '../models/developer_enrichment_model.dart' as enrichment;
 import '../config/app_config.dart';
 import '../mock_data.dart';
 import '../repositories/project_repository.dart';
@@ -212,8 +212,8 @@ class ProjectProvider extends ChangeNotifier {
     // No developer name → mark limited and exit gracefully.
     if (devName.isEmpty) {
       debugPrint('[DevEnrich] No developer name for project $projectId');
-      project.developerEnrichment = DeveloperEnrichment(
-        status: EnrichmentStatus.limited,
+      project.developerEnrichment = enrichment.DeveloperEnrichment(
+        status: enrichment.EnrichmentStatus.limited,
         lastUpdated: DateTime.now(),
         summary: 'No developer/agency name available.',
         riskFlags: ['No developer information on record'],
@@ -228,14 +228,14 @@ class ProjectProvider extends ChangeNotifier {
         existing != null &&
         existing.lastUpdated != null &&
         DateTime.now().difference(existing.lastUpdated!).inDays < 7 &&
-        existing.status != EnrichmentStatus.error) {
+        existing.status != enrichment.EnrichmentStatus.error) {
       debugPrint('[DevEnrich] Cache still valid for "$devName" — skipping.');
       return;
     }
 
     // Set loading state.
-    project.developerEnrichment = DeveloperEnrichment(
-      status: EnrichmentStatus.loading,
+    project.developerEnrichment = enrichment.DeveloperEnrichment(
+      status: enrichment.EnrichmentStatus.loading,
       lastUpdated: existing?.lastUpdated,
       summary: existing?.summary ?? '',
       riskFlags: existing?.riskFlags,
@@ -249,13 +249,13 @@ class ProjectProvider extends ChangeNotifier {
 
       final now = DateTime.now();
       final encodedName = Uri.encodeComponent(devName);
-      final sources = <DeveloperSourceItem>[];
+      final sources = <enrichment.DeveloperSourceItem>[];
 
       // 1. Official website (if available).
       if (project.developerWebsite != null &&
           project.developerWebsite!.isNotEmpty) {
-        sources.add(DeveloperSourceItem(
-          type: SourceType.official,
+        sources.add(enrichment.DeveloperSourceItem(
+          type: enrichment.SourceType.official,
           title: '$devName — Official Website',
           url: project.developerWebsite!,
           confidence: 0.9,
@@ -265,8 +265,8 @@ class ProjectProvider extends ChangeNotifier {
       }
 
       // 2. Google search for the developer.
-      sources.add(DeveloperSourceItem(
-        type: SourceType.official,
+      sources.add(enrichment.DeveloperSourceItem(
+        type: enrichment.SourceType.official,
         title: 'Google Search: $devName',
         url: 'https://www.google.com/search?q=$encodedName+Malaysia+developer',
         confidence: 0.5,
@@ -275,8 +275,8 @@ class ProjectProvider extends ChangeNotifier {
       ));
 
       // 3. SSM (Companies Commission of Malaysia) search.
-      sources.add(DeveloperSourceItem(
-        type: SourceType.filing,
+      sources.add(enrichment.DeveloperSourceItem(
+        type: enrichment.SourceType.filing,
         title: 'SSM Company Search: $devName',
         url: 'https://www.ssm.com.my/Pages/e-Search.aspx',
         confidence: 0.6,
@@ -285,20 +285,20 @@ class ProjectProvider extends ChangeNotifier {
       ));
 
       // 4. Google News search.
-      sources.add(DeveloperSourceItem(
-        type: SourceType.news,
+      sources.add(enrichment.DeveloperSourceItem(
+        type: enrichment.SourceType.news,
         title: 'Recent News: $devName',
         url:
             'https://news.google.com/search?q=$encodedName+Malaysia&hl=en-MY',
         confidence: 0.5,
-        sentiment: SourceSentiment.neu,
+        sentiment: enrichment.SourceSentiment.neu,
         fetchedAt: now,
         notes: 'Google News results — review for positive/negative coverage.',
       ));
 
       // 5. Google search for quarterly/annual reports.
-      sources.add(DeveloperSourceItem(
-        type: SourceType.filing,
+      sources.add(enrichment.DeveloperSourceItem(
+        type: enrichment.SourceType.filing,
         title: 'Public Reports: $devName',
         url:
             'https://www.google.com/search?q=$encodedName+annual+report+filetype:pdf',
@@ -308,12 +308,12 @@ class ProjectProvider extends ChangeNotifier {
       ));
 
       // 6. Public review signals (Google Reviews).
-      sources.add(DeveloperSourceItem(
-        type: SourceType.review,
+      sources.add(enrichment.DeveloperSourceItem(
+        type: enrichment.SourceType.review,
         title: 'Google Reviews: $devName',
         url: 'https://www.google.com/search?q=$encodedName+reviews',
         confidence: 0.4,
-        sentiment: SourceSentiment.neu,
+        sentiment: enrichment.SourceSentiment.neu,
         fetchedAt: now,
         notes: 'Public search link — no ToS-restricted scraping.',
       ));
@@ -355,10 +355,10 @@ class ProjectProvider extends ChangeNotifier {
           ? '$devName — no significant risk flags detected from available data.'
           : '$devName — ${riskFlags.length} risk flag(s) identified. Review sources for details.';
 
-      project.developerEnrichment = DeveloperEnrichment(
+      project.developerEnrichment = enrichment.DeveloperEnrichment(
         status: riskFlags.isEmpty
-            ? EnrichmentStatus.ready
-            : EnrichmentStatus.limited,
+            ? enrichment.EnrichmentStatus.ready
+            : enrichment.EnrichmentStatus.limited,
         lastUpdated: now,
         summary: summary,
         riskFlags: riskFlags,
@@ -370,8 +370,8 @@ class ProjectProvider extends ChangeNotifier {
           '${sources.length} sources, ${riskFlags.length} risk flags.');
     } catch (e) {
       debugPrint('[DevEnrich] Error enriching "$devName": $e');
-      project.developerEnrichment = DeveloperEnrichment(
-        status: EnrichmentStatus.error,
+      project.developerEnrichment = enrichment.DeveloperEnrichment(
+        status: enrichment.EnrichmentStatus.error,
         lastUpdated: DateTime.now(),
         summary: 'Failed to generate enrichment data: $e',
         riskFlags: ['❌ Enrichment failed — try again later'],
