@@ -27,10 +27,22 @@ class SegmentedSearchBar extends StatefulWidget {
 }
 
 class _SegmentedSearchBarState extends State<SegmentedSearchBar> {
+  final TextEditingController _locationController = TextEditingController();
   String _location = '';
   ProjectCategory? _selectedCategory;
   ProjectStatus? _selectedStatus;
   int? _expandedSection;
+
+  bool get _hasActiveFilters =>
+      _location.trim().isNotEmpty ||
+      _selectedCategory != null ||
+      _selectedStatus != null;
+
+  @override
+  void dispose() {
+    _locationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +126,11 @@ class _SegmentedSearchBarState extends State<SegmentedSearchBar> {
           
           // Search button
           _buildSearchButton(),
+
+          if (_hasActiveFilters) ...[
+            const SizedBox(width: AppSpacing.xs),
+            _buildResetButton(),
+          ],
           
           const SizedBox(width: AppSpacing.xs),
         ],
@@ -165,6 +182,26 @@ class _SegmentedSearchBarState extends State<SegmentedSearchBar> {
     );
   }
 
+  Widget _buildResetButton() {
+    return GestureDetector(
+      onTap: _resetFilters,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Icon(
+          Icons.close_rounded,
+          color: AppColors.textSecondary,
+          size: 20,
+        ),
+      ),
+    );
+  }
+
   Widget _buildExpandedContent() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -201,6 +238,7 @@ class _SegmentedSearchBarState extends State<SegmentedSearchBar> {
         ),
         const SizedBox(height: AppSpacing.sm),
         TextField(
+          controller: _locationController,
           onChanged: (value) {
             setState(() => _location = value);
             widget.onLocationChanged?.call(value);
@@ -240,18 +278,22 @@ class _SegmentedSearchBarState extends State<SegmentedSearchBar> {
           children: [
             _buildQuickOption('Kuala Lumpur', () {
               setState(() => _location = 'Kuala Lumpur');
+              _locationController.text = 'Kuala Lumpur';
               widget.onLocationChanged?.call('Kuala Lumpur');
             }),
             _buildQuickOption('Petaling Jaya', () {
               setState(() => _location = 'Petaling Jaya');
+              _locationController.text = 'Petaling Jaya';
               widget.onLocationChanged?.call('Petaling Jaya');
             }),
             _buildQuickOption('Shah Alam', () {
               setState(() => _location = 'Shah Alam');
+              _locationController.text = 'Shah Alam';
               widget.onLocationChanged?.call('Shah Alam');
             }),
             _buildQuickOption('Subang Jaya', () {
               setState(() => _location = 'Subang Jaya');
+              _locationController.text = 'Subang Jaya';
               widget.onLocationChanged?.call('Subang Jaya');
             }),
           ],
@@ -467,6 +509,19 @@ class _SegmentedSearchBarState extends State<SegmentedSearchBar> {
     setState(() {
       _expandedSection = _expandedSection == section ? null : section;
     });
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _location = '';
+      _selectedCategory = null;
+      _selectedStatus = null;
+      _expandedSection = null;
+      _locationController.clear();
+    });
+    widget.onLocationChanged?.call('');
+    widget.onCategoryChanged?.call(null);
+    widget.onStatusChanged?.call(null);
   }
 
   Color _getCategoryColor(ProjectCategory? category) {
