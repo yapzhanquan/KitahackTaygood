@@ -12,15 +12,17 @@ Future<bool> requireLogin(BuildContext context) async {
     builder: (context) {
       return AlertDialog(
         title: const Text('Login Required'),
-        content: const Text('Please login first to continue.'),
+        content: const Text(
+          'Create an account or login to use this feature. You can continue browsing as guest.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Not now'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Login'),
+            child: const Text('Login / Register'),
           ),
         ],
       );

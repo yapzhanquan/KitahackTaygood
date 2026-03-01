@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../presentation/screens/main_page.dart';
-import '../screens/login_screen.dart';
 import 'auth_service.dart';
 
 class AuthGate extends StatelessWidget {
@@ -19,11 +18,8 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        if (snapshot.data != null) {
-          return const MainPage();
-        }
-
-        return const LoginScreen();
+        // Guest users can browse the app; restricted actions are guarded.
+        return const MainPage();
       },
     );
   }

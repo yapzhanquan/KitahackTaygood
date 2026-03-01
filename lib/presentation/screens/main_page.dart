@@ -16,6 +16,8 @@ import 'project_detail_page.dart';
 import 'add_checkin_page.dart';
 import '../../auth/login_guard.dart';
 import '../../auth/auth_service.dart';
+import '../../screens/login_screen.dart';
+import '../../screens/register_screen.dart';
 
 /// Premium Airbnb-style Main Page
 /// Features:
@@ -258,94 +260,182 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
   }
 
   Widget _buildProfileAvatar() {
-    final user = FirebaseAuth.instance.currentUser;
-    final userName = (user?.displayName?.trim().isNotEmpty ?? false)
-        ? user!.displayName!.trim()
-        : 'User';
-    final userEmail = user?.email?.trim().isNotEmpty == true
-        ? user!.email!.trim()
-        : 'No email';
-    final avatarLetter = userName.isNotEmpty
-        ? userName[0].toUpperCase()
-        : 'U';
+    return StreamBuilder<User?>(
+      stream: AuthService.authStateChanges(),
+      initialData: FirebaseAuth.instance.currentUser,
+      builder: (context, snapshot) {
+        final user = snapshot.data;
 
-    return PopupMenuButton<String>(
-      tooltip: 'Profile',
-      onSelected: (value) async {
-        if (value == 'logout') {
-          await AuthService.logout();
-        }
-      },
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      ),
-      itemBuilder: (context) => [
-        PopupMenuItem<String>(
-          enabled: false,
-          child: SizedBox(
-            width: 220,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  userName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.titleSmall.copyWith(
+        if (user == null) {
+          return PopupMenuButton<String>(
+            tooltip: 'Account',
+            onSelected: (value) {
+              if (value == 'login') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              }
+              if (value == 'register') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                );
+              }
+            },
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                enabled: false,
+                child: SizedBox(
+                  width: 220,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Guest mode',
+                        style: AppTypography.titleSmall.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Login to contribute and submit check-ins.',
+                        style: AppTypography.captionMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'login',
+                child: Text(
+                  'Login',
+                  style: AppTypography.labelLarge.copyWith(
                     color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  userEmail,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.captionMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem<String>(
-          value: 'logout',
-          child: Row(
-            children: [
-              const Icon(
-                Icons.logout_rounded,
-                size: 18,
-                color: AppColors.textPrimary,
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                'Logout',
-                style: AppTypography.labelLarge.copyWith(
-                  color: AppColors.textPrimary,
+              PopupMenuItem<String>(
+                value: 'register',
+                child: Text(
+                  'Create account',
+                  style: AppTypography.labelLarge.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Icon(
+                Icons.person_outline_rounded,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          );
+        }
+
+        final userName = (user.displayName?.trim().isNotEmpty ?? false)
+            ? user.displayName!.trim()
+            : 'User';
+        final userEmail = user.email?.trim().isNotEmpty == true
+            ? user.email!.trim()
+            : 'No email';
+        final avatarLetter =
+            userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+
+        return PopupMenuButton<String>(
+          tooltip: 'Profile',
+          onSelected: (value) async {
+            if (value == 'logout') {
+              await AuthService.logout();
+            }
+          },
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
-        ),
-      ],
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: AppColors.surfaceVariant,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          avatarLetter,
-          style: AppTypography.labelLarge.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w700,
+          itemBuilder: (context) => [
+            PopupMenuItem<String>(
+              enabled: false,
+              child: SizedBox(
+                width: 220,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      userName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      userEmail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.captionMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const PopupMenuDivider(),
+            PopupMenuItem<String>(
+              value: 'logout',
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.logout_rounded,
+                    size: 18,
+                    color: AppColors.textPrimary,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'Logout',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.border),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              avatarLetter,
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
