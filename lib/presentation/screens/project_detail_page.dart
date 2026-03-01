@@ -15,6 +15,7 @@ import '../../data/services/news_scraper_service.dart';
 import '../../providers/project_provider.dart';
 import '../../providers/report_provider.dart';
 import '../../providers/compare_provider.dart';
+import '../../models/checkin_model.dart';
 import '../../models/project_model.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/vertical_timeline.dart';
@@ -140,48 +141,6 @@ class ProjectDetailPage extends StatelessWidget {
               top: 100,
               left: AppSpacing.md,
               child: GlassmorphismStatusBadge(status: project.status),
-            ),
-            Positioned(
-              bottom: AppSpacing.md,
-              right: AppSpacing.md,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.grid_view_rounded,
-                          size: 16,
-                          color: AppColors.textPrimary,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Text(
-                          AppStrings.showAllPhotos,
-                          style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
             ),
           ],
         ),
@@ -352,9 +311,7 @@ class ProjectDetailPage extends StatelessWidget {
           const _SectionDivider(),
           _DetailsSection(project: project),
           const _SectionDivider(),
-          _TimelineSection(project: project),
-          const _SectionDivider(),
-          _ReviewsSection(project: project),
+          _CommunityCheckinsSection(project: project),
           const _SectionDivider(),
           _LocationSection(project: project),
           const _SectionDivider(),
@@ -1527,9 +1484,63 @@ class _DetailChip extends StatelessWidget {
   }
 }
 
-class _TimelineSection extends StatelessWidget {
+class _CommunityCheckinsSection extends StatelessWidget {
   final Project project;
-  const _TimelineSection({required this.project});
+  const _CommunityCheckinsSection({required this.project});
+
+  @override
+  Widget build(BuildContext context) {
+    final checkinsStream = FirebaseFirestore.instance
+        .collection('checkins')
+        .where('projectId', isEqualTo: project.id)
+        .snapshots();
+
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: checkinsStream,
+      builder: (context, snapshot) {
+        final docs =
+            snapshot.data?.docs ??
+            <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+        final checkIns = docs
+            .map((doc) => CheckIn.fromFirestore(doc.id, doc.data()))
+            .toList();
+        checkIns.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        final errorMessage = snapshot.hasError
+            ? 'Unable to load check-ins from Firestore. Check your rules/index.'
+            : null;
+        final isLoading =
+            snapshot.connectionState == ConnectionState.waiting &&
+            checkIns.isEmpty;
+
+        return Column(
+          children: [
+            _TimelineSection(
+              checkIns: checkIns,
+              isLoading: isLoading,
+              errorMessage: errorMessage,
+            ),
+            _ReviewsSection(
+              checkIns: checkIns,
+              isLoading: isLoading,
+              errorMessage: errorMessage,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TimelineSection extends StatelessWidget {
+  final List<CheckIn> checkIns;
+  final bool isLoading;
+  final String? errorMessage;
+
+  const _TimelineSection({
+    required this.checkIns,
+    required this.isLoading,
+    this.errorMessage,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1542,11 +1553,34 @@ class _TimelineSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${AppStrings.timeline} (${project.checkIns.length})',
+            '${AppStrings.timeline} (${checkIns.length})',
             style: AppTypography.headlineMedium,
           ),
           const SizedBox(height: AppSpacing.md),
-          if (project.checkIns.isEmpty)
+          if (isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (errorMessage != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Text(
+                errorMessage!,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            )
+          else if (checkIns.isEmpty)
             Container(
               padding: const EdgeInsets.all(AppSpacing.xl),
               decoration: BoxDecoration(
@@ -1568,7 +1602,7 @@ class _TimelineSection extends StatelessWidget {
               ),
             )
           else
-            VerticalTimeline(checkIns: project.checkIns, maxItems: 3),
+            VerticalTimeline(checkIns: checkIns, maxItems: 3),
         ],
       ),
     );
@@ -1576,177 +1610,83 @@ class _TimelineSection extends StatelessWidget {
 }
 
 class _ReviewsSection extends StatelessWidget {
-  final Project project;
-  const _ReviewsSection({required this.project});
+  final List<CheckIn> checkIns;
+  final bool isLoading;
+  final String? errorMessage;
+
+  const _ReviewsSection({
+    required this.checkIns,
+    required this.isLoading,
+    this.errorMessage,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final checkinsQuery = FirebaseFirestore.instance
-        .collection('checkins')
-        .where('projectId', isEqualTo: project.id)
-        .orderBy('createdAt', descending: true);
-
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: checkinsQuery.snapshots(),
-      builder: (context, snapshot) {
-        final docs = snapshot.data?.docs ?? const [];
-        return Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.pagePadding,
-            vertical: AppSpacing.lg,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.rate_review_outlined,
-                    size: 24,
-                    color: AppColors.textPrimary,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    '${docs.length} ${AppStrings.communityReports}',
-                    style: AppTypography.headlineMedium,
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              if (snapshot.connectionState == ConnectionState.waiting)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (docs.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text(
-                    'No community reports yet.',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                )
-              else
-                ...docs.map((doc) => _FirestoreCheckinCard(data: doc.data())),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _FirestoreCheckinCard extends StatelessWidget {
-  final Map<String, dynamic> data;
-
-  const _FirestoreCheckinCard({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    final userName = (data['userName'] as String?)?.trim().isNotEmpty == true
-        ? (data['userName'] as String).trim()
-        : 'Community User';
-    final note = (data['note'] as String?)?.trim() ?? '';
-    final statusLabel = (data['status'] as String?)?.trim() ?? 'Unverified';
-    final createdAtTs = data['createdAt'];
-    final createdAt = createdAtTs is Timestamp ? createdAtTs.toDate() : null;
-    final dateText = createdAt != null
-        ? DateFormat('MMM d, yyyy').format(createdAt)
-        : 'Just now';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      padding: const EdgeInsets.all(AppSpacing.cardPadding),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        border: Border.all(color: AppColors.border),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.pagePadding,
+        vertical: AppSpacing.lg,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.surfaceVariant,
-                child: Text(
-                  userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                  style: AppTypography.labelLarge,
-                ),
+              const Icon(
+                Icons.rate_review_outlined,
+                size: 24,
+                color: AppColors.textPrimary,
               ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(userName, style: AppTypography.titleSmall),
-                    Text(dateText, style: AppTypography.captionMedium),
-                  ],
-                ),
+              Text(
+                '${checkIns.length} ${AppStrings.communityReports}',
+                style: AppTypography.headlineMedium,
               ),
-              _StatusPill(statusLabel: statusLabel),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            note,
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textPrimary,
-              height: 1.5,
-            ),
-          ),
+          const SizedBox(height: AppSpacing.md),
+          if (isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (errorMessage != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Text(
+                errorMessage!,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            )
+          else if (checkIns.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Text(
+                'No community reports yet.',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            )
+          else
+            ...checkIns.map((checkIn) => CheckInReviewCard(checkIn: checkIn)),
         ],
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  final String statusLabel;
-  const _StatusPill({required this.statusLabel});
-
-  @override
-  Widget build(BuildContext context) {
-    final normalized = statusLabel.toLowerCase();
-    Color color;
-    switch (normalized) {
-      case 'active':
-        color = AppColors.green600;
-        break;
-      case 'slowing':
-        color = AppColors.amber600;
-        break;
-      case 'stalled':
-        color = AppColors.red600;
-        break;
-      default:
-        color = AppColors.gray600;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-      ),
-      child: Text(
-        statusLabel,
-        style: AppTypography.badge.copyWith(color: color),
       ),
     );
   }

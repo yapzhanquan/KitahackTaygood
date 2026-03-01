@@ -210,7 +210,37 @@ class _TimelineItem extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
-          
+
+          if (checkIn.photoUrl != null && checkIn.photoUrl!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              child: CachedNetworkImage(
+                imageUrl: checkIn.photoUrl!,
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  height: 120,
+                  color: AppColors.slate100,
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  height: 120,
+                  color: AppColors.slate100,
+                  child: const Center(
+                    child: Icon(
+                      Icons.image_not_supported_outlined,
+                      color: AppColors.slate400,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
           const SizedBox(height: AppSpacing.xs),
           
           // Reporter

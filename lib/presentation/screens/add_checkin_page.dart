@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -77,20 +78,35 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
                     _pickImage(ImageSource.gallery);
                   },
                 ),
-                ListTile(
-                  leading: const Icon(Icons.camera_alt_rounded),
-                  title: const Text('Take a photo'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImage(ImageSource.camera);
-                  },
-                ),
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  Future<Map<String, String>?> _uploadSelectedImage({
+    required String projectId,
+    required String userId,
+  }) async {
+    final imageFile = _selectedImage;
+    if (imageFile == null) return null;
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final photoPath = 'checkin_photos/$projectId/$userId/$timestamp.jpg';
+    final ref = FirebaseStorage.instance.ref().child(photoPath);
+
+    await ref.putFile(
+      imageFile,
+      SettableMetadata(contentType: 'image/jpeg'),
+    );
+    final photoUrl = await ref.getDownloadURL();
+
+    return {
+      'photoUrl': photoUrl,
+      'photoPath': photoPath,
+    };
   }
 
   void _openProjectPickerSheet(List<Project> projects) {
@@ -252,10 +268,34 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
     setState(() => _isSubmitting = true);
 
     try {
-      await FirebaseFirestore.instance.collection('checkins').add({
+      String? photoUrl;
+      String? photoPath;
+      if (_selectedImage != null) {
+        try {
+          final uploaded = await _uploadSelectedImage(
+            projectId: projectId,
+            userId: user.uid,
+          );
+          photoUrl = uploaded?['photoUrl'];
+          photoPath = uploaded?['photoPath'];
+        } catch (_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Photo upload failed. Please try another image.'),
+            ),
+          );
+          return;
+        }
+      }
+
+      final docRef = await FirebaseFirestore.instance.collection('checkins').add({
         'projectId': projectId,
+        'statusKey': _selectedStatus.name,
         'status': _selectedStatus.label,
         'note': note,
+        'photoUrl': photoUrl,
+        'photoPath': photoPath,
         'userId': user.uid,
         'userName': userName,
         'userEmail': userEmail,
@@ -263,10 +303,11 @@ class _AddCheckinPageState extends State<AddCheckinPage> {
       });
 
       final checkIn = CheckIn(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: docRef.id,
         projectId: projectId,
         status: _selectedStatus,
         note: note,
+        photoUrl: photoUrl,
         timestamp: DateTime.now(),
         reporterName: userName,
       );
