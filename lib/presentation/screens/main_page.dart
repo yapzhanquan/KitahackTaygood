@@ -19,6 +19,37 @@ import '../../auth/auth_service.dart';
 import '../../screens/login_screen.dart';
 import '../../screens/register_screen.dart';
 
+Future<void> _handleBookmarkTap(BuildContext context, Project project) async {
+  if (!await requireLogin(context)) return;
+  if (!context.mounted) return;
+
+  final provider = context.read<ProjectProvider>();
+  final result = await provider.toggleSavedProject(project.id);
+  if (!context.mounted) return;
+
+  final messenger = ScaffoldMessenger.of(context);
+  if (result.success) {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          result.isSaved
+              ? AppStrings.bookmarkAdded
+              : AppStrings.bookmarkRemoved,
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  } else {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(result.errorMessage ?? AppStrings.bookmarkUpdateFailed),
+        backgroundColor: AppColors.red500,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+}
+
 /// Premium Airbnb-style Main Page
 /// Features:
 /// - Segmented search bar (Location | Category | Status)
@@ -31,16 +62,18 @@ class MainPage extends StatefulWidget {
   State<MainPage> createState() => _MainPageState();
 }
 
-class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin {
+class _MainPageState extends State<MainPage>
+    with SingleTickerProviderStateMixin {
   int _selectedTab = 0;
   late AnimationController _slideController;
   late Animation<double> _slideAnimation;
   bool? _lastIsTablet;
 
   static const _tabs = [
-    _TabInfo(icon: Icons.grid_view_rounded, label: 'Projects'),
-    _TabInfo(icon: Icons.category_outlined, label: 'Categories'),
-    _TabInfo(icon: Icons.insights_rounded, label: 'Insights'),
+    _TabInfo(icon: Icons.grid_view_rounded, label: AppStrings.tabProjects),
+    _TabInfo(icon: Icons.category_outlined, label: AppStrings.tabCategories),
+    _TabInfo(icon: Icons.insights_rounded, label: AppStrings.tabInsights),
+    _TabInfo(icon: Icons.bookmark_rounded, label: AppStrings.tabSaved),
   ];
 
   @override
@@ -50,9 +83,10 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       duration: const Duration(milliseconds: 250),
       vsync: this,
     );
-    _slideAnimation = Tween<double>(begin: 0, end: 0).animate(
-      CurvedAnimation(parent: _slideController, curve: Curves.easeOut),
-    );
+    _slideAnimation = Tween<double>(
+      begin: 0,
+      end: 0,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
   }
 
   @override
@@ -73,7 +107,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
 
   void _selectTab(int index) {
     if (index == _selectedTab) return;
-    
+
     setState(() {
       _selectedTab = index;
     });
@@ -97,18 +131,14 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                       _ProjectsView(),
                       _CategoriesView(),
                       _InsightsView(),
+                      _SavedView(),
                     ],
                   ),
                 ),
               ],
             ),
             // Floating Compare Bar at bottom
-            const Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: CompareBar(),
-            ),
+            const Positioned(bottom: 0, left: 0, right: 0, child: CompareBar()),
           ],
         ),
       ),
@@ -121,23 +151,18 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
         horizontal: AppSpacing.pagePadding,
         vertical: AppSpacing.sm,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-      ),
+      decoration: const BoxDecoration(color: AppColors.surface),
       child: Row(
         children: [
           // Logo
-          Text(
-            AppStrings.appName,
-            style: AppTypography.logo,
-          ),
+          Text(AppStrings.appName, style: AppTypography.logo),
           const Spacer(),
-          
+
           // Contribute button
           _buildContributeButton(),
-          
+
           const SizedBox(width: AppSpacing.sm),
-          
+
           // Profile avatar
           _buildProfileAvatar(),
         ],
@@ -160,7 +185,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
       child: LayoutBuilder(
         builder: (context, constraints) {
           final tabWidth = constraints.maxWidth / _tabs.length;
-          
+
           return Stack(
             children: [
               // Sliding indicator
@@ -178,13 +203,13 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                   ),
                 ),
               ),
-              
+
               // Tab buttons
               Row(
                 children: List.generate(_tabs.length, (index) {
                   final tab = _tabs[index];
                   final isSelected = _selectedTab == index;
-                  
+
                   return Expanded(
                     child: GestureDetector(
                       onTap: () => _selectTab(index),
@@ -200,19 +225,19 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
                             Icon(
                               tab.icon,
                               size: 20,
-                              color: isSelected 
-                                  ? AppColors.slate900 
+                              color: isSelected
+                                  ? AppColors.slate900
                                   : AppColors.textTertiary,
                             ),
                             const SizedBox(height: 4),
                             Text(
                               tab.label,
                               style: AppTypography.labelMedium.copyWith(
-                                color: isSelected 
-                                    ? AppColors.textPrimary 
+                                color: isSelected
+                                    ? AppColors.textPrimary
                                     : AppColors.textTertiary,
-                                fontWeight: isSelected 
-                                    ? FontWeight.w700 
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
                                     : FontWeight.w500,
                               ),
                             ),
@@ -354,8 +379,9 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
         final userEmail = user.email?.trim().isNotEmpty == true
             ? user.email!.trim()
             : 'No email';
-        final avatarLetter =
-            userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
+        final avatarLetter = userName.isNotEmpty
+            ? userName[0].toUpperCase()
+            : 'U';
 
         return PopupMenuButton<String>(
           tooltip: 'Profile',
@@ -443,7 +469,7 @@ class _MainPageState extends State<MainPage> with SingleTickerProviderStateMixin
 class _TabInfo {
   final IconData icon;
   final String label;
-  
+
   const _TabInfo({required this.icon, required this.label});
 }
 
@@ -460,7 +486,8 @@ class _ProjectsView extends StatelessWidget {
         final stalled = provider.stalledProjects;
         final publicP = provider.publicProjects;
         final privateP = provider.privateProjects;
-        final hasFilters = provider.searchQuery.isNotEmpty ||
+        final hasFilters =
+            provider.searchQuery.isNotEmpty ||
             provider.categoryFilter != null ||
             provider.statusFilter != null;
 
@@ -486,21 +513,245 @@ class _ProjectsView extends StatelessWidget {
               SectionHeader(title: AppStrings.activeProjectsNearYou),
               _HorizontalProjectList(projects: active),
               const SizedBox(height: AppSpacing.sectionMargin),
-              
+
               SectionHeader(title: AppStrings.recentlyFlaggedAsStalled),
               _HorizontalProjectList(projects: stalled),
               const SizedBox(height: AppSpacing.sectionMargin),
-              
+
               SectionHeader(title: AppStrings.publicInfrastructure),
               _HorizontalProjectList(projects: publicP),
               const SizedBox(height: AppSpacing.sectionMargin),
-              
+
               SectionHeader(title: AppStrings.privateDevelopments),
               _HorizontalProjectList(projects: privateP),
             ],
           ],
         );
       },
+    );
+  }
+}
+
+class _SavedView extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ProjectProvider>(
+      builder: (context, provider, _) {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          return _SavedGuestState();
+        }
+
+        if (provider.isBookmarkLoading) {
+          return _SavedLoadingState();
+        }
+
+        final savedActive = provider.savedActiveProjects;
+        final savedStalled = provider.savedStalledProjects;
+        final savedPublic = provider.savedPublicProjects;
+        final savedPrivate = provider.savedPrivateProjects;
+        final hasSavedProjects = provider.savedProjects.isNotEmpty;
+
+        if (!hasSavedProjects) {
+          return _SavedEmptyState();
+        }
+
+        return ListView(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
+          children: [
+            if (provider.bookmarkError != null)
+              Container(
+                margin: const EdgeInsets.fromLTRB(
+                  AppSpacing.pagePadding,
+                  AppSpacing.md,
+                  AppSpacing.pagePadding,
+                  0,
+                ),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.red50,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  border: Border.all(
+                    color: AppColors.red500.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Text(
+                  provider.bookmarkError!,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.red500,
+                  ),
+                ),
+              ),
+            SectionHeader(
+              title: AppStrings.savedProjects,
+              count: provider.savedProjects.length,
+            ),
+            if (savedActive.isNotEmpty) ...[
+              SectionHeader(
+                title: AppStrings.activeProjectsNearYou,
+                count: savedActive.length,
+              ),
+              _HorizontalProjectList(projects: savedActive),
+              const SizedBox(height: AppSpacing.sectionMargin),
+            ],
+            if (savedStalled.isNotEmpty) ...[
+              SectionHeader(
+                title: AppStrings.recentlyFlaggedAsStalled,
+                count: savedStalled.length,
+              ),
+              _HorizontalProjectList(projects: savedStalled),
+              const SizedBox(height: AppSpacing.sectionMargin),
+            ],
+            if (savedPublic.isNotEmpty) ...[
+              SectionHeader(
+                title: AppStrings.publicInfrastructure,
+                count: savedPublic.length,
+              ),
+              _HorizontalProjectList(projects: savedPublic),
+              const SizedBox(height: AppSpacing.sectionMargin),
+            ],
+            if (savedPrivate.isNotEmpty) ...[
+              SectionHeader(
+                title: AppStrings.privateDevelopments,
+                count: savedPrivate.length,
+              ),
+              _HorizontalProjectList(projects: savedPrivate),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SavedGuestState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.pagePadding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(
+                Icons.bookmark_border_rounded,
+                color: AppColors.textTertiary,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(AppStrings.navSaved, style: AppTypography.headlineSmall),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              AppStrings.loginRequiredToViewSaved,
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.sm,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
+                  },
+                  child: const Text(AppStrings.loginToSave),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                    );
+                  },
+                  child: const Text('Create account'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SavedLoadingState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 28,
+            height: 28,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            AppStrings.loadingSavedProjects,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SavedEmptyState extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.pagePadding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: const Icon(
+                Icons.bookmark_border_rounded,
+                color: AppColors.textTertiary,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              AppStrings.noSavedProjects,
+              style: AppTypography.headlineSmall,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              AppStrings.noSavedProjectsHint,
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -529,14 +780,12 @@ class _HorizontalProjectList extends StatelessWidget {
           return ProjectCard(
             project: project,
             isBookmarked: projectProvider.isProjectSaved(project.id),
-            onBookmarkTap: () => projectProvider.toggleSavedProject(project.id),
+            onBookmarkTap: () => _handleBookmarkTap(context, project),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ProjectDetailPage(
-                    projectId: project.id,
-                  ),
+                  builder: (_) => ProjectDetailPage(projectId: project.id),
                 ),
               );
             },
@@ -565,10 +814,7 @@ class _HorizontalProjectList extends StatelessWidget {
               color: AppColors.textTertiary,
             ),
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              AppStrings.noProjectsFound,
-              style: AppTypography.subtitle,
-            ),
+            Text(AppStrings.noProjectsFound, style: AppTypography.subtitle),
           ],
         ),
       ),
@@ -681,42 +927,46 @@ class _InsightsView extends StatelessWidget {
     return Consumer<ProjectProvider>(
       builder: (context, provider, _) {
         final all = provider.filteredProjects;
-        final activeCount =
-            all.where((p) => p.status == ProjectStatus.active).length;
-        final slowingCount =
-            all.where((p) => p.status == ProjectStatus.slowing).length;
-        final stalledCount =
-            all.where((p) => p.status == ProjectStatus.stalled).length;
-        final unverifiedCount =
-            all.where((p) => p.status == ProjectStatus.unverified).length;
-        final highConf =
-            all.where((p) => p.confidence == ConfidenceLevel.high).length;
-        final medConf =
-            all.where((p) => p.confidence == ConfidenceLevel.medium).length;
-        final lowConf =
-            all.where((p) => p.confidence == ConfidenceLevel.low).length;
+        final activeCount = all
+            .where((p) => p.status == ProjectStatus.active)
+            .length;
+        final slowingCount = all
+            .where((p) => p.status == ProjectStatus.slowing)
+            .length;
+        final stalledCount = all
+            .where((p) => p.status == ProjectStatus.stalled)
+            .length;
+        final unverifiedCount = all
+            .where((p) => p.status == ProjectStatus.unverified)
+            .length;
+        final highConf = all
+            .where((p) => p.confidence == ConfidenceLevel.high)
+            .length;
+        final medConf = all
+            .where((p) => p.confidence == ConfidenceLevel.medium)
+            .length;
+        final lowConf = all
+            .where((p) => p.confidence == ConfidenceLevel.low)
+            .length;
 
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.pagePadding),
           children: [
-            Text(
-              AppStrings.projectInsights,
-              style: AppTypography.displaySmall,
-            ),
+            Text(AppStrings.projectInsights, style: AppTypography.displaySmall),
             const SizedBox(height: AppSpacing.xxs),
             Text(
               AppStrings.overviewOfProjects(all.length),
               style: AppTypography.subtitle,
             ),
-            
+
             const SizedBox(height: AppSpacing.xl),
-            
+
             Text(
               AppStrings.statusBreakdown,
               style: AppTypography.headlineSmall,
             ),
             const SizedBox(height: AppSpacing.sm),
-            
+
             Row(
               children: [
                 Expanded(
@@ -760,15 +1010,15 @@ class _InsightsView extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: AppSpacing.xl),
-            
+
             Text(
               AppStrings.confidenceLevels,
               style: AppTypography.headlineSmall,
             ),
             const SizedBox(height: AppSpacing.sm),
-            
+
             _ConfidenceBar(
               label: AppStrings.highConfidence,
               count: highConf,
@@ -789,9 +1039,9 @@ class _InsightsView extends StatelessWidget {
               total: all.length,
               color: AppColors.red500,
             ),
-            
+
             const SizedBox(height: AppSpacing.xl),
-            
+
             // Info disclaimer
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -866,10 +1116,7 @@ class _InsightCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            label,
-            style: AppTypography.labelMedium,
-          ),
+          Text(label, style: AppTypography.labelMedium),
         ],
       ),
     );
@@ -892,7 +1139,7 @@ class _ConfidenceBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fraction = total > 0 ? count / total : 0.0;
-    
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -906,10 +1153,7 @@ class _ConfidenceBar extends StatelessWidget {
             children: [
               Text(label, style: AppTypography.labelLarge),
               const Spacer(),
-              Text(
-                '$count / $total',
-                style: AppTypography.labelMedium,
-              ),
+              Text('$count / $total', style: AppTypography.labelMedium),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),

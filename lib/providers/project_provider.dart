@@ -1,11 +1,36 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import '../models/project_model.dart';
-import '../models/checkin_model.dart';
+
 import '../mock_data.dart';
+import '../models/checkin_model.dart';
+import '../models/project_model.dart';
+
+class BookmarkToggleResult {
+  final bool success;
+  final bool isSaved;
+  final String? errorMessage;
+
+  const BookmarkToggleResult({
+    required this.success,
+    required this.isSaved,
+    this.errorMessage,
+  });
+}
 
 class ProjectProvider extends ChangeNotifier {
   List<Project> _projects = [];
   final Set<String> _savedProjectIds = <String>{};
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  StreamSubscription<User?>? _authStateSubscription;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
+  _bookmarkSubscription;
+  bool _isBookmarkLoading = false;
+  String? _bookmarkError;
 
   String _searchQuery = '';
   ProjectCategory? _categoryFilter;
@@ -13,9 +38,13 @@ class ProjectProvider extends ChangeNotifier {
 
   ProjectProvider() {
     _projects = List.from(mockProjects);
+    _authStateSubscription = _auth.authStateChanges().listen(
+      _handleAuthStateChanged,
+    );
+    _handleAuthStateChanged(_auth.currentUser);
   }
 
-  // ── Filters ──
+  // Filters
 
   String get searchQuery => _searchQuery;
   ProjectCategory? get categoryFilter => _categoryFilter;
@@ -43,7 +72,7 @@ class ProjectProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Filtered list ──
+  // Filtered list
 
   List<Project> get filteredProjects {
     return _projects.where((p) {
@@ -64,7 +93,7 @@ class ProjectProvider extends ChangeNotifier {
     }).toList();
   }
 
-  // ── Section-based getters ──
+  // Section-based getters
 
   List<Project> get activeProjects =>
       _projects.where((p) => p.status == ProjectStatus.active).toList();
@@ -78,27 +107,87 @@ class ProjectProvider extends ChangeNotifier {
   List<Project> get privateProjects =>
       _projects.where((p) => !p.isPublic).toList();
 
-  // ── Single project ──
+  // Single project
 
-  Project getProjectById(String id) =>
-      _projects.firstWhere((p) => p.id == id);
+  Project getProjectById(String id) => _projects.firstWhere((p) => p.id == id);
 
-  // -- Saved projects --
+  // Saved projects
 
   bool isProjectSaved(String projectId) => _savedProjectIds.contains(projectId);
 
   Set<String> get savedProjectIds => Set.unmodifiable(_savedProjectIds);
 
-  void toggleSavedProject(String projectId) {
-    if (_savedProjectIds.contains(projectId)) {
-      _savedProjectIds.remove(projectId);
-    } else {
-      _savedProjectIds.add(projectId);
+  List<Project> get savedProjects =>
+      _projects.where((p) => _savedProjectIds.contains(p.id)).toList();
+
+  List<Project> get savedActiveProjects =>
+      savedProjects.where((p) => p.status == ProjectStatus.active).toList();
+
+  List<Project> get savedStalledProjects =>
+      savedProjects.where((p) => p.status == ProjectStatus.stalled).toList();
+
+  List<Project> get savedPublicProjects =>
+      savedProjects.where((p) => p.isPublic).toList();
+
+  List<Project> get savedPrivateProjects =>
+      savedProjects.where((p) => !p.isPublic).toList();
+
+  bool get isBookmarkLoading => _isBookmarkLoading;
+  String? get bookmarkError => _bookmarkError;
+
+  Future<BookmarkToggleResult> toggleSavedProject(String projectId) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return const BookmarkToggleResult(
+        success: false,
+        isSaved: false,
+        errorMessage: 'Login required to save projects.',
+      );
     }
+
+    final wasSaved = _savedProjectIds.contains(projectId);
+    final shouldSave = !wasSaved;
+
+    if (shouldSave) {
+      _savedProjectIds.add(projectId);
+    } else {
+      _savedProjectIds.remove(projectId);
+    }
+    _bookmarkError = null;
     notifyListeners();
+
+    final bookmarkRef = _bookmarkCollectionForUser(user.uid).doc(projectId);
+
+    try {
+      if (shouldSave) {
+        await bookmarkRef.set({
+          'projectId': projectId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } else {
+        await bookmarkRef.delete();
+      }
+
+      return BookmarkToggleResult(success: true, isSaved: shouldSave);
+    } catch (_) {
+      if (wasSaved) {
+        _savedProjectIds.add(projectId);
+      } else {
+        _savedProjectIds.remove(projectId);
+      }
+      _bookmarkError = 'Unable to update bookmark. Please try again.';
+      notifyListeners();
+
+      return BookmarkToggleResult(
+        success: false,
+        isSaved: wasSaved,
+        errorMessage: _bookmarkError,
+      );
+    }
   }
 
-  // ── Check-in management ──
+  // Check-in management
 
   void addCheckIn(String projectId, CheckIn checkIn) {
     final project = _projects.firstWhere((p) => p.id == projectId);
@@ -134,5 +223,62 @@ class ProjectProvider extends ChangeNotifier {
     if (daysSinceLastCheckIn > 60) {
       project.confidence = ConfidenceLevel.low;
     }
+  }
+
+  void _handleAuthStateChanged(User? user) {
+    _bookmarkSubscription?.cancel();
+    _bookmarkSubscription = null;
+
+    if (user == null) {
+      _savedProjectIds.clear();
+      _isBookmarkLoading = false;
+      _bookmarkError = null;
+      notifyListeners();
+      return;
+    }
+
+    _isBookmarkLoading = true;
+    _bookmarkError = null;
+    notifyListeners();
+
+    _bookmarkSubscription = _bookmarkCollectionForUser(user.uid)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            _savedProjectIds
+              ..clear()
+              ..addAll(
+                snapshot.docs.map((doc) {
+                  final data = doc.data();
+                  final projectId = data['projectId'];
+                  if (projectId is String && projectId.isNotEmpty) {
+                    return projectId;
+                  }
+                  return doc.id;
+                }),
+              );
+            _isBookmarkLoading = false;
+            _bookmarkError = null;
+            notifyListeners();
+          },
+          onError: (_) {
+            _isBookmarkLoading = false;
+            _bookmarkError = 'Unable to load saved projects.';
+            notifyListeners();
+          },
+        );
+  }
+
+  CollectionReference<Map<String, dynamic>> _bookmarkCollectionForUser(
+    String uid,
+  ) {
+    return _firestore.collection('users').doc(uid).collection('bookmarks');
+  }
+
+  @override
+  void dispose() {
+    _authStateSubscription?.cancel();
+    _bookmarkSubscription?.cancel();
+    super.dispose();
   }
 }

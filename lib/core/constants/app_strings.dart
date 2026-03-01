@@ -19,6 +19,7 @@ class AppStrings {
   static const String tabProjects = 'Projects';
   static const String tabCategories = 'Categories';
   static const String tabInsights = 'Insights';
+  static const String tabSaved = 'Saved';
 
   // ─────────────────────────────────────────────────────────────────────────
   // ACTIONS
@@ -34,6 +35,7 @@ class AppStrings {
   static const String clear = 'Clear';
   static const String cancel = 'Cancel';
   static const String submit = 'Submit';
+  static const String loginToSave = 'Login to save';
 
   // ─────────────────────────────────────────────────────────────────────────
   // SECTIONS
@@ -46,6 +48,7 @@ class AppStrings {
   static const String projectInsights = 'Project Insights';
   static const String statusBreakdown = 'Status Breakdown';
   static const String confidenceLevels = 'Confidence Levels';
+  static const String savedProjects = 'Saved Projects';
 
   // ─────────────────────────────────────────────────────────────────────────
   // PROJECT DETAILS
@@ -104,19 +107,31 @@ class AppStrings {
   // EMPTY STATES
   // ─────────────────────────────────────────────────────────────────────────
   static const String noProjectsFound = 'No projects found';
+  static const String noSavedProjects = 'No saved projects yet';
+  static const String noSavedProjectsHint =
+      'Tap the bookmark icon on any project to save it here.';
+  static const String loginRequiredToViewSaved =
+      'Login to save projects and view them here.';
+  static const String loadingSavedProjects = 'Loading saved projects...';
   static const String noCheckIns = 'No check-ins yet';
   static const String comingSoon = 'Coming soon';
+  static const String bookmarkAdded = 'Saved project';
+  static const String bookmarkRemoved = 'Removed from saved projects';
+  static const String bookmarkUpdateFailed =
+      'Unable to update bookmark. Please try again.';
 
   // ─────────────────────────────────────────────────────────────────────────
   // DISCLAIMERS & INFO
   // ─────────────────────────────────────────────────────────────────────────
-  static const String communityDataDisclaimer = 
+  static const String communityDataDisclaimer =
       'Community-reported data. Not a legal finding. Information is provided as-is and may not reflect the official project status.';
-  static const String insightsDisclaimer = 
+  static const String insightsDisclaimer =
       'Community-reported data. Not a legal finding. Help improve accuracy by contributing check-ins.';
-  static String overviewOfProjects(int count) => 'Overview of $count tracked projects';
+  static String overviewOfProjects(int count) =>
+      'Overview of $count tracked projects';
   static String checkInsCount(int count) => '$count check-ins';
-  static String communityCheckInsCount(int count) => '$count community check-ins';
+  static String communityCheckInsCount(int count) =>
+      '$count community check-ins';
 
   // ─────────────────────────────────────────────────────────────────────────
   // CHECK-IN FORM
